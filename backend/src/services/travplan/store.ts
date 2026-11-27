@@ -34,6 +34,7 @@ import {
 } from "./packingBridge";
 import { ensurePackingMigrated } from "./packingMigration";
 import { scheduleRoute } from "./routeSchedule";
+import { suggestDriveSplits } from "./routeSplit";
 import { compareVariants } from "./variants";
 import { todayIn } from "../../shared/time/clock";
 import { isValidZone } from "../../shared/time/zonedParts";
@@ -75,7 +76,10 @@ export function view(
     findings: checkPlan(state, planToday(state)),
     budget: deriveBudget(state),
     ...(state.shape === "route"
-      ? { schedule: scheduleRoute(state), variants: compareVariants(state) }
+      ? {
+          schedule: { ...scheduleRoute(state), splits: suggestDriveSplits(state) },
+          variants: compareVariants(state),
+        }
       : {}),
     ...(lastMutationId ? { lastMutationId } : {}),
   };

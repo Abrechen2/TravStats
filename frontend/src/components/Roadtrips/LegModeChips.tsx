@@ -3,6 +3,8 @@ import type { CSSProperties, JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { toursApi } from "../../lib/api/tours";
+import { UseCancelledError, withUseConsent } from "../../lib/api/serviceUse";
+import { useServiceUseConfirm } from "../ExternalServices/useServiceUseConfirm";
 import { logger } from "../../lib/logger";
 import { isProtectedSource } from "../../lib/roadtrip/reorderImpact";
 import { saveErrorKey } from "../../lib/saveErrorMessage";
@@ -50,6 +52,7 @@ export default function LegModeChips({
   onChanged: () => void;
 }): JSX.Element {
   const { t } = useTranslation(["roadtrips"]);
+  const confirm = useServiceUseConfirm();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const protectedLine = isProtectedSource(leg.source);
@@ -78,8 +81,19 @@ export default function LegModeChips({
     if (wantsRoute) {
       try {
         routedBack =
-          (await toursApi.routeLeg(undefined, routeId, from, to)).fallbackReason === null;
+          (
+            await withUseConsent(
+              (confirmation) => toursApi.routeLeg(undefined, routeId, from, to, confirmation),
+              confirm.ask
+            )
+          ).fallbackReason === null;
       } catch (err) {
+        // Declining the public router keeps the straight line, which is not a failure.
+        if (err instanceof UseCancelledError) {
+          setBusy(false);
+          onChanged();
+          return;
+        }
         logger.warn("Re-routing a roadtrip leg after a mode change failed", err);
         routedBack = false;
       }
@@ -91,6 +105,7 @@ export default function LegModeChips({
 
   return (
     <div className="flex flex-col self-start" style={{ gap: 4 }}>
+      {confirm.dialog}
       <div
         role="group"
         aria-label={t("roadtrips:editor.legMode.label")}

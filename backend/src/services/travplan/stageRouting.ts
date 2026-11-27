@@ -1,6 +1,7 @@
 import { AppError } from "../../middleware/errorHandler";
 import { haversineKm } from "../../shared/geo/haversine";
-import { resolveRouteProvider } from "../tour/routing/resolveProvider";
+import { resolveRouteChoice } from "../tour/routing/resolveProvider";
+import { ConfirmationRequiredError, type UseConfirmation } from "../externalServices/useConsent";
 import { routeLegGeometry } from "../tour/routing/routeLeg";
 import { providerCallGate } from "../tour/routing/providerBudget";
 import type { PlanStage, PlanState } from "./types";
@@ -39,7 +40,8 @@ const roundKm = (km: number) => Math.round(km * 10) / 10;
 export async function routeStage(
   userId: string,
   state: PlanState,
-  stageId: string
+  stageId: string,
+  confirmation?: UseConfirmation
 ): Promise<StageMetrics> {
   const stage = state.stages.find((s) => s.id === stageId) ?? notFound();
   const from = state.stations.find((s) => s.id === stage.fromStationId) ?? notFound();
@@ -74,7 +76,10 @@ export async function routeStage(
   if (stage.mode !== "drive")
     return { ...stored, fallbackReason: "unroutable_mode", mode: stage.mode, fromCoord, toCoord };
 
-  const provider = await resolveRouteProvider(userId);
+  const choice = await resolveRouteChoice(userId, confirmation);
+  // Nothing was sent: the account has to say yes to the public router first.
+  if (choice.kind === "confirm") throw new ConfirmationRequiredError(choice.disclosure);
+  const provider = choice.kind === "provider" ? choice.provider : null;
   const leg = await routeLegGeometry(
     provider,
     { from: fromCoord, to: toCoord, mode: "road", vehicle: state.vehicle?.kind ?? null },

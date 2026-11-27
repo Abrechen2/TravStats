@@ -171,7 +171,7 @@ export const useConfirmationSchema = z.strictObject({
 
 /** What an outbound use would send, answered with 409 CONFIRMATION_REQUIRED before anything goes. */
 export const disclosureSchema = z.object({
-  serviceId: z.enum(["aiSuggestionHelp", "mapMatching"]),
+  serviceId: z.enum(["aiSuggestionHelp", "mapMatching", "publicRouting"]),
   host: z.string(),
   provider: z.string(),
   location: z.enum(["cloud", "lan"]),

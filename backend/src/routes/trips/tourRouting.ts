@@ -1,10 +1,13 @@
 import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
+import { useConfirmationSchema } from "../../schemas/externalServices";
+import { sendConfirmationRequired } from "../../services/externalServices/useConsent";
 
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { LEG_MODES, LegMode } from "../../services/tour/tourDistance";
-import { resolveRouteProvider } from "../../services/tour/routing/resolveProvider";
+import { resolveRouteChoice } from "../../services/tour/routing/resolveProvider";
 import { routeLegGeometry } from "../../services/tour/routing/routeLeg";
 import { providerCallGate } from "../../services/tour/routing/providerBudget";
 import {
@@ -46,6 +49,9 @@ import logger from "../../utils/logger";
  * hard 409 (single leg) or a per-leg skip that still returns 200 (route-all),
  * persist the result, and shape the response.
  */
+
+/** The optional confirmation of the public router (nothing is sent without one). */
+const confirmBody = z.object({ confirmation: useConfirmationSchema.optional() }).passthrough();
 
 const router = Router();
 
@@ -108,7 +114,15 @@ router.post(
       const userId = req.userId!;
       const routeId = await resolveRouteFromRequest(userId, req);
 
-      const provider: RouteProvider | null = await resolveRouteProvider(userId);
+      const choice = await resolveRouteChoice(
+        userId,
+        confirmBody.parse(req.body ?? {}).confirmation
+      );
+      if (choice.kind === "confirm") {
+        sendConfirmationRequired(res, choice.disclosure);
+        return;
+      }
+      const provider: RouteProvider | null = choice.kind === "provider" ? choice.provider : null;
       if (provider === null) {
         throw new AppError(
           "Routing is not configured for this instance — no provider is set up",
@@ -195,8 +209,6 @@ router.post(
       const userId = req.userId!;
       const routeId = await resolveRouteFromRequest(userId, req);
 
-      const provider = await resolveRouteProvider(userId);
-
       const legs = await prisma.tripRouteLeg.findMany({
         where: { routeId },
         orderBy: { fromStop: { routeOrderIdx: "asc" } },
@@ -205,6 +217,20 @@ router.post(
           toStop: { select: { lat: true, lon: true } },
         },
       });
+      // Only the legs this action would route count as points that leave.
+      const toRoute = legs.filter(
+        (l) => l.source === "straight" && isRoutableMode(requireLegMode(l.mode))
+      ).length;
+      const choice = await resolveRouteChoice(
+        userId,
+        confirmBody.parse(req.body ?? {}).confirmation,
+        toRoute * 2
+      );
+      if (choice.kind === "confirm" && toRoute > 0) {
+        sendConfirmationRequired(res, choice.disclosure);
+        return;
+      }
+      const provider = choice.kind === "provider" ? choice.provider : null;
 
       const vehicle = await routeVehicle(routeId);
       let routedCount = 0;

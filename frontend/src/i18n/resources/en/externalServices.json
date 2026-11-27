@@ -488,6 +488,17 @@
       "quotaLine": "OSM usage policy",
       "alwaysOnWhy": "Place search, address entry and coordinates run on it; without it no form could find a place. To avoid the public servers, enter your own addresses under \"Expert\"."
     },
+    "publicRouting": {
+      "name": "Public routing server (fallback)",
+      "purpose": "Compute routes while no routing service of your own is set up",
+      "why": "Last resort without a routing service: computes routes through FOSSGIS's public OSRM (routing.openstreetmap.de). Used only when the account has allowed it beforehand.",
+      "cost": "Free; fair use, at most one request per second for the whole instance.",
+      "quota": "At most 1 request per second (kept by TravStats).",
+      "dataOut": "The start and end coordinates of the route. Nothing is sent before the account has agreed.",
+      "getKeyUrl": "https://routing.openstreetmap.de/about.html",
+      "getKeyLabel": "FOSSGIS routing usage rules",
+      "quotaLine": "fair use"
+    },
     "selfHostedRouting": {
       "name": "Self-hosted routing servers",
       "purpose": "OSRM and OpenRailRouting, self-hosted",
@@ -869,7 +880,8 @@
     },
     "services": {
       "aiSuggestionHelp": "AI help for unclear suggestions",
-      "mapMatching": "Snap to roads"
+      "mapMatching": "Snap to roads",
+      "publicRouting": "Public routing"
     },
     "fieldNames": {
       "candidates": "Candidate names",

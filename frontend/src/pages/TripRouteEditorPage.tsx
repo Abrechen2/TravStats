@@ -26,6 +26,8 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useTourTracks } from "../hooks/useTourTracks";
 import { useTourTrackCoverage } from "../hooks/useTourTrackCoverage";
 import { tripsApi } from "../lib/api";
+import { UseCancelledError, withUseConsent } from "../lib/api/serviceUse";
+import { useServiceUseConfirm } from "../components/ExternalServices/useServiceUseConfirm";
 import { toursApi, type TourPointInput } from "../lib/api/tours";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { logger } from "../lib/logger";
@@ -89,6 +91,7 @@ function apiErrorStatus(error: unknown): number | null {
 export default function TripRouteEditorPage(): JSX.Element {
   const { id, routeId } = useParams<{ id: string; routeId: string }>();
   const { t } = useTranslation(["trips", "roadtrips", "common"]);
+  const confirm = useServiceUseConfirm();
   const { reports, report, clear, fail } = useRouteEditorReports(t);
   const { colorOf } = useDomainColors();
   const stravaConnected = useStravaConnected();
@@ -413,11 +416,10 @@ export default function TripRouteEditorPage(): JSX.Element {
       clear("legs");
       void (async (): Promise<void> => {
         try {
-          const { fallbackReason } = await toursApi.routeLeg(
-            id,
-            routeId,
-            leg.fromStopId,
-            leg.toStopId
+          const { fallbackReason } = await withUseConsent(
+            (confirmation) =>
+              toursApi.routeLeg(id, routeId, leg.fromStopId, leg.toStopId, confirmation),
+            confirm.ask
           );
           await load();
           if (fallbackReason !== null) {
@@ -428,6 +430,7 @@ export default function TripRouteEditorPage(): JSX.Element {
             });
           }
         } catch (err) {
+          if (err instanceof UseCancelledError) return;
           if (apiErrorStatus(err) === 409) {
             report("legs", { kind: "error", message: t("trips:tours.routing.notConfigured") });
           } else {
@@ -436,7 +439,7 @@ export default function TripRouteEditorPage(): JSX.Element {
         }
       })();
     },
-    [id, routeId, load, clear, report, fail, t]
+    [id, routeId, load, clear, report, fail, t, confirm.ask]
   );
 
   /**
@@ -456,7 +459,10 @@ export default function TripRouteEditorPage(): JSX.Element {
     setRoutingAllInProgress(true);
     void (async (): Promise<void> => {
       try {
-        const result = await toursApi.routeAll(id, routeId);
+        const result = await withUseConsent(
+          (confirmation) => toursApi.routeAll(id, routeId, confirmation),
+          confirm.ask
+        );
         await load();
         if (!mountedRef.current) return;
         // A partly routed section says so, and keeps saying it (forgejo#247).
@@ -478,12 +484,13 @@ export default function TripRouteEditorPage(): JSX.Element {
                 }),
         });
       } catch (err) {
+        if (err instanceof UseCancelledError) return;
         fail("legs", err, "trips:tours.routing.allError", () => handleRouteAll());
       } finally {
         if (mountedRef.current) setRoutingAllInProgress(false);
       }
     })();
-  }, [id, routeId, load, clear, report, fail, t]);
+  }, [id, routeId, load, clear, report, fail, t, confirm.ask]);
 
   const handleClearLeg = useCallback(
     (leg: TourLeg): void => {
@@ -586,6 +593,7 @@ export default function TripRouteEditorPage(): JSX.Element {
   const ownPoints = editsOwnPoints(trip !== null, sectionStops);
   return (
     <AppShell>
+      {confirm.dialog}
       <div className="space-y-6">
         <header>
           <Link

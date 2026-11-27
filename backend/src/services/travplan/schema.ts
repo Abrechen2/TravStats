@@ -258,6 +258,8 @@ export const vehicleSchema = z
     consumptionPer100: z.number().finite().min(0).max(100).nullable(),
     fuelPrice: money.nullable(),
     fuelCurrency: currency.nullable(),
+    maxDriveMinutesPerDay: z.number().finite().int().min(30).max(1440).nullable().optional(),
+    maxDriveKmPerDay: z.number().finite().min(20).max(3000).nullable().optional(),
   })
   .strict();
 export const stationWeatherSchema = z

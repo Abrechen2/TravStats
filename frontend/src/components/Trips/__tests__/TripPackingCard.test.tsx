@@ -43,15 +43,52 @@ const stale = () =>
 
 vi.mock("../../../hooks/useTodayZone", () => ({ useTodayZone: () => "UTC" }));
 
+async function expand(): Promise<void> {
+  const toggle = await screen.findByRole("button", { name: /trips:packing\.(collapsed|title)/ });
+  await waitFor(() => expect(toggle).toBeEnabled());
+  await userEvent.click(toggle);
+}
+async function openForm(): Promise<void> {
+  await userEvent.click(await screen.findByRole("button", { name: "trips:packing.addEntry" }));
+}
+
 describe("TripPackingCard (TripPackingList on the trip page)", () => {
   beforeEach(() => {
     get.mockReset().mockResolvedValue(list(3, [["Passport", false]]));
     put.mockReset();
   });
 
+  it("starts as one line with the progress; the items and the add form stay behind it", async () => {
+    render(<TripPackingCard tripId="t1" />);
+    expect(await screen.findByRole("button", { name: /trips:packing\.collapsed/ })).toHaveAttribute(
+      "aria-expanded",
+      "false"
+    );
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByLabelText("trips:packing.addLabel")).toBeNull();
+    await expand();
+    expect(screen.getByRole("checkbox")).toBeInTheDocument();
+    // The form is behind "+ Eintrag", not open under the list.
+    expect(screen.queryByLabelText("trips:packing.addLabel")).toBeNull();
+    await openForm();
+    expect(screen.getByLabelText("trips:packing.addLabel")).toBeInTheDocument();
+  });
+
+  it("keeps a save failure on screen after the card is folded again", async () => {
+    put.mockRejectedValue(new Error("offline"));
+    render(<TripPackingCard tripId="t1" />);
+    await expand();
+    await userEvent.click(await screen.findByRole("checkbox"));
+    expect(await screen.findByText("trips:packing.notice.saveFailed")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: /trips:packing\.collapsed/ }));
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.getByText("trips:packing.notice.saveFailed")).toBeTruthy();
+  });
+
   it("writes a ticked item with the rev it read and shows what the server answered", async () => {
     put.mockResolvedValue(list(4, [["Passport", true]]));
     render(<TripPackingCard tripId="t1" />);
+    await expand();
     await userEvent.click(await screen.findByRole("checkbox"));
     await waitFor(() => expect(put).toHaveBeenCalled());
     const [tripId, items, baseRev, mutationId] = put.mock.calls[0];
@@ -86,6 +123,7 @@ describe("TripPackingCard (TripPackingList on the trip page)", () => {
     });
     put.mockResolvedValue(list(3, [["Tent", true]]));
     render(<TripPackingCard tripId="t1" />);
+    await expand();
     expect(await screen.findByText(/2 × Tent/)).toBeTruthy();
     await userEvent.click(screen.getByRole("checkbox"));
     await waitFor(() => expect(put).toHaveBeenCalled());
@@ -109,6 +147,8 @@ describe("TripPackingCard (TripPackingList on the trip page)", () => {
     get.mockReset().mockResolvedValue(list(1, []));
     put.mockResolvedValue(list(2, []));
     render(<TripPackingCard tripId="t1" />);
+    await expand();
+    await openForm();
     await userEvent.type(await screen.findByLabelText("trips:packing.addLabel"), "Sunscreen");
     await userEvent.type(screen.getByLabelText("trips:packing.categoryLabel"), "Beach");
     const qty = screen.getByLabelText("trips:packing.quantityLabel");
@@ -136,6 +176,7 @@ describe("TripPackingCard (TripPackingList on the trip page)", () => {
       ])
     );
     render(<TripPackingCard tripId="t1" />);
+    await expand();
     await userEvent.click(await screen.findByRole("checkbox"));
     expect(await screen.findByText("trips:packing.notice.stale")).toBeTruthy();
     expect(screen.getByText("Charger")).toBeTruthy(); // the app's item is on screen
@@ -148,6 +189,7 @@ describe("TripPackingCard (TripPackingList on the trip page)", () => {
     get.mockResolvedValueOnce(list(3, [["Passport", false]]));
     get.mockRejectedValueOnce(new Error("offline"));
     render(<TripPackingCard tripId="t1" />);
+    await expand();
     await userEvent.click(await screen.findByRole("checkbox"));
     expect(await screen.findByText("trips:packing.notice.staleReloadFailed")).toBeTruthy();
   });
@@ -155,6 +197,7 @@ describe("TripPackingCard (TripPackingList on the trip page)", () => {
   it("shows 'not saved' and keeps the stored list when a write fails", async () => {
     put.mockRejectedValue(new Error("500"));
     render(<TripPackingCard tripId="t1" />);
+    await expand();
     await userEvent.click(await screen.findByRole("checkbox"));
     expect(await screen.findByText("trips:packing.notice.saveFailed")).toBeTruthy();
     expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(false);
@@ -163,9 +206,11 @@ describe("TripPackingCard (TripPackingList on the trip page)", () => {
   it("offers a retry when the list cannot be loaded, instead of showing an empty list", async () => {
     get.mockRejectedValueOnce(new Error("offline"));
     render(<TripPackingCard tripId="t1" />);
+    // Collapsed, and the failure is still on screen.
     expect(await screen.findByText("trips:packing.loadFailed")).toBeTruthy();
     expect(screen.queryByText("trips:packing.empty")).toBeNull();
     await userEvent.click(screen.getByText("trips:packing.retry"));
+    await expand();
     expect(await screen.findByText("Passport")).toBeTruthy();
   });
 
@@ -173,6 +218,8 @@ describe("TripPackingCard (TripPackingList on the trip page)", () => {
     get.mockReset().mockResolvedValue({ items: [], rev: 0, updatedAt: null });
     put.mockResolvedValue(list(1, [["Sunscreen", false]]));
     render(<TripPackingCard tripId="t1" />);
+    await expand();
+    await openForm();
     await userEvent.type(await screen.findByLabelText("trips:packing.addLabel"), "Sunscreen");
     await userEvent.click(screen.getByText("trips:packing.add"));
     await waitFor(() => expect(put).toHaveBeenCalled());
@@ -185,6 +232,7 @@ describe("TripPackingCard (TripPackingList on the trip page)", () => {
     put.mockRejectedValueOnce(new Error("Network Error"));
     put.mockResolvedValueOnce(list(4, [["Passport", true]]));
     render(<TripPackingCard tripId="t1" />);
+    await expand();
     await userEvent.click(await screen.findByRole("checkbox"));
     await userEvent.click(await screen.findByText("trips:packing.retry"));
     await waitFor(() => expect(put).toHaveBeenCalledTimes(2));
@@ -232,7 +280,9 @@ describe("TripPackingCard (TripPackingList on the trip page)", () => {
 
     it("leaves an upcoming or running trip fully editable", async () => {
       render(<TripPackingCard tripId="t1" endDate="2999-01-01" />);
+      await expand();
       expect(await screen.findByRole("checkbox")).toBeInTheDocument();
+      await openForm();
       expect(screen.getByLabelText("trips:packing.addLabel")).toBeInTheDocument();
     });
   });

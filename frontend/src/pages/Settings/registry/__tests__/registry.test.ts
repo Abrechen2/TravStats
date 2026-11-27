@@ -47,14 +47,14 @@ describe("the settings registry follows the settings v3 page model", () => {
     }
   });
 
-  it("counts 34 pages, 128 groups and cards (49 of them service cards: 19 the account's, 30 the server's) and 276 rows", () => {
+  it("counts 34 pages, 129 groups and cards (50 of them service cards: 19 the account's, 31 the server's) and 276 rows", () => {
     const sections = SETTINGS_REGISTRY.flatMap((p) => p.sections);
     expect(SETTINGS_REGISTRY).toHaveLength(34);
-    // +2 since rc.46: the AI help and road matching cards (owner 2026-11-25).
-    expect(sections).toHaveLength(128);
-    expect(sections.filter((s) => s.serviceCategory)).toHaveLength(49);
+    // +2 since rc.46: the AI help and road matching cards (owner 2026-11-25); +1 the public routing fallback.
+    expect(sections).toHaveLength(129);
+    expect(sections.filter((s) => s.serviceCategory)).toHaveLength(50);
     expect(registryPage("dienstek")!.sections).toHaveLength(19);
-    expect(registryPage("dienste")!.sections).toHaveLength(30);
+    expect(registryPage("dienste")!.sections).toHaveLength(31);
     expect(sections.flatMap((s) => s.rows)).toHaveLength(276);
   });
 
@@ -445,7 +445,7 @@ describe("the server area follows the prototype (settings v3 S5)", () => {
     }
     // The prototype's 21 cards, then the four that are left of the folded ones (expert;
     // vessel data since 2026-11-22), and the AI help and road matching since rc.46.
-    expect(cards).toHaveLength(30);
+    expect(cards).toHaveLength(31);
     const expertCards = registryPage("dienste")!.sections.filter((c) => c.level === "expert");
     expect(expertCards.map((c) => c.id)).toEqual([
       "railTimetables",

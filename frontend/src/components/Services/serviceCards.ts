@@ -153,6 +153,11 @@ export const SERVICE_CARDS: readonly ServiceCardDef[] = [
     use: ["on"],
   },
   {
+    id: "publicRouting",
+    group: "karte",
+    use: ["on"],
+  },
+  {
     id: "immich",
     group: "foto",
     use: ["mine", "allowConn", "on"],

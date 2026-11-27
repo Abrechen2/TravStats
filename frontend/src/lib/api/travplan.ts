@@ -2,6 +2,7 @@ import { newPlanId } from "../travplanId";
 import { api, parserApi } from "./client";
 import { isRemotePlanMode, remotePlanHttp } from "./remotePlans";
 import { apiErrorMachineCode } from "../apiError";
+import type { UseConfirmation } from "./serviceUse";
 import type {
   PlanCollab,
   PlanMember,
@@ -125,6 +126,7 @@ function basePackingRev(plan: PlanView, operation: PlanOperation): { basePacking
   if (!touchesPacking || plan.packingRev === undefined) return {};
   return { basePackingRev: plan.packingRev };
 }
+
 export const travplanApi = {
   places: async (q: string, language: "de" | "en", kind: "any" | "port" = "any") =>
     (await http().get<PlaceSearch>("/travplan/places", { params: { q, language, kind } })).data,
@@ -133,11 +135,12 @@ export const travplanApi = {
   deletePlan: async (tripId: string) =>
     (await http().delete<{ deleted: true }>("/trips/" + tripId + "/plan")).data,
   /** Routes one stage on the server; a failed router keeps the stored figures. */
-  routeStage: async (plan: PlanView, stageId: string) =>
+  routeStage: async (plan: PlanView, stageId: string, confirmation?: UseConfirmation) =>
     (
       await http().post<PlanView>("/trips/" + plan.tripId + "/plan/stages/" + stageId + "/route", {
         baseRevision: plan.revision,
         clientRef: newPlanId(),
+        ...(confirmation ? { confirmation } : {}),
       })
     ).data,
   placeholderMatches: async (tripId: string, booking: Record<string, unknown>) =>

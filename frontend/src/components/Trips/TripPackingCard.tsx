@@ -55,6 +55,10 @@ export default function TripPackingCard({
   const [quantity, setQuantity] = useState(1);
   const [scope, setScope] = useState<"personal" | "shared">("personal");
   const [open, setOpen] = useState(false);
+  // The running trip's list starts as one line (owner, 2026-11-26: "ein bisschen
+  // zu penetrant"); errors stay outside the fold so a collapsed card never hides one.
+  const [expanded, setExpanded] = useState(false);
+  const [adding, setAdding] = useState(false);
   const finished = isTripFinished(endDate, todayIn(useTodayZone())) || completed;
   // A write whose answer never arrived may have been applied. Its retry reuses
   // the mutation id, so the server answers "already applied" instead of 409.
@@ -82,6 +86,8 @@ export default function TripPackingCard({
     setCategory("");
     setQuantity(1);
     setScope("personal");
+    setExpanded(false);
+    setAdding(false);
     unanswered.current = null;
     void load();
   }, [load]);
@@ -187,14 +193,18 @@ export default function TripPackingCard({
   return (
     <Card style={{ margin: "var(--ts-space-xl) 0" }} data-testid="trip-packing-card">
       <section className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
-        <div className="flex flex-wrap items-baseline" style={{ gap: "var(--ts-space-sm)" }}>
-          <h2 className="t-card-title">{t("trips:packing.title")}</h2>
-          {list && items.length > 0 && (
-            <span className="t-caption">
-              {t("trips:packing.progress", { done: doneCount, total: items.length })}
-            </span>
-          )}
-        </div>
+        <button
+          type="button"
+          className="t-card-title text-left"
+          aria-expanded={expanded}
+          disabled={!list}
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {list && items.length > 0
+            ? t("trips:packing.collapsed", { done: doneCount, total: items.length })
+            : t("trips:packing.title")}
+          {expanded ? " ▾" : " ▸"}
+        </button>
         {loadFailed && (
           <p role="alert" className="t-caption flex flex-wrap items-center" style={{ gap: 8 }}>
             {t("trips:packing.loadFailed")}
@@ -219,7 +229,7 @@ export default function TripPackingCard({
             )}
           </InlineError>
         )}
-        {list && (
+        {list && expanded && (
           <>
             {items.length === 0 ? (
               <p className="t-caption">{t("trips:packing.empty")}</p>
@@ -262,57 +272,70 @@ export default function TripPackingCard({
                 ))}
               </ul>
             )}
-            <form onSubmit={(e) => void add(e)} className="flex flex-wrap" style={{ gap: 8 }}>
-              <input
-                className="input"
-                style={{ flex: "1 1 200px", minHeight: "var(--ts-size-touch-min)" }}
-                value={draft}
-                maxLength={PACKING_MAX_LABEL}
-                disabled={busy || full}
-                aria-label={t("trips:packing.addLabel")}
-                placeholder={t("trips:packing.addPlaceholder")}
-                onChange={(e) => setDraft(e.target.value)}
-              />
-              <input
-                className="input"
-                style={{ flex: "1 1 120px", minHeight: "var(--ts-size-touch-min)" }}
-                value={category}
-                maxLength={PACKING_MAX_CATEGORY}
-                disabled={busy || full}
-                aria-label={t("trips:packing.categoryLabel")}
-                placeholder={t("trips:packing.categoryPlaceholder")}
-                onChange={(e) => setCategory(e.target.value)}
-              />
-              <input
-                className="input"
-                type="number"
-                min={1}
-                max={PACKING_MAX_QUANTITY}
-                style={{ flex: "0 0 80px", minHeight: "var(--ts-size-touch-min)" }}
-                value={quantity}
-                disabled={busy || full}
-                aria-label={t("trips:packing.quantityLabel")}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-              />
-              <select
-                className="input"
-                style={{ flex: "0 0 auto", minHeight: "var(--ts-size-touch-min)" }}
-                value={scope}
-                disabled={busy || full}
-                aria-label={t("trips:packing.scopeLabel")}
-                onChange={(e) => setScope(e.target.value as "personal" | "shared")}
-              >
-                <option value="personal">{t("trips:packing.scope.personal")}</option>
-                <option value="shared">{t("trips:packing.scope.shared")}</option>
-              </select>
+            {!adding && (
               <button
-                type="submit"
+                type="button"
                 className="btn-secondary"
-                disabled={busy || full || draft.trim() === ""}
+                style={{ alignSelf: "flex-start" }}
+                disabled={full}
+                onClick={() => setAdding(true)}
               >
-                {t("trips:packing.add")}
+                {t("trips:packing.addEntry")}
               </button>
-            </form>
+            )}
+            {adding && (
+              <form onSubmit={(e) => void add(e)} className="flex flex-wrap" style={{ gap: 8 }}>
+                <input
+                  className="input"
+                  style={{ flex: "1 1 200px", minHeight: "var(--ts-size-touch-min)" }}
+                  value={draft}
+                  maxLength={PACKING_MAX_LABEL}
+                  disabled={busy || full}
+                  aria-label={t("trips:packing.addLabel")}
+                  placeholder={t("trips:packing.addPlaceholder")}
+                  onChange={(e) => setDraft(e.target.value)}
+                />
+                <input
+                  className="input"
+                  style={{ flex: "1 1 120px", minHeight: "var(--ts-size-touch-min)" }}
+                  value={category}
+                  maxLength={PACKING_MAX_CATEGORY}
+                  disabled={busy || full}
+                  aria-label={t("trips:packing.categoryLabel")}
+                  placeholder={t("trips:packing.categoryPlaceholder")}
+                  onChange={(e) => setCategory(e.target.value)}
+                />
+                <input
+                  className="input"
+                  type="number"
+                  min={1}
+                  max={PACKING_MAX_QUANTITY}
+                  style={{ flex: "0 0 80px", minHeight: "var(--ts-size-touch-min)" }}
+                  value={quantity}
+                  disabled={busy || full}
+                  aria-label={t("trips:packing.quantityLabel")}
+                  onChange={(e) => setQuantity(Number(e.target.value))}
+                />
+                <select
+                  className="input"
+                  style={{ flex: "0 0 auto", minHeight: "var(--ts-size-touch-min)" }}
+                  value={scope}
+                  disabled={busy || full}
+                  aria-label={t("trips:packing.scopeLabel")}
+                  onChange={(e) => setScope(e.target.value as "personal" | "shared")}
+                >
+                  <option value="personal">{t("trips:packing.scope.personal")}</option>
+                  <option value="shared">{t("trips:packing.scope.shared")}</option>
+                </select>
+                <button
+                  type="submit"
+                  className="btn-secondary"
+                  disabled={busy || full || draft.trim() === ""}
+                >
+                  {t("trips:packing.add")}
+                </button>
+              </form>
+            )}
             {full && (
               <p className="t-caption">{t("trips:packing.full", { max: PACKING_MAX_ITEMS })}</p>
             )}

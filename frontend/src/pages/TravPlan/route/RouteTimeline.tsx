@@ -100,9 +100,31 @@ export function StationCard({
         <PlanGrow>
           <p className="t-label-mono">
             {index + 1} / {total}
-            {arrive
-              ? ` · ${arrive}${depart && station.nights > 0 ? " – " + depart : ""}`
-              : ` · ${t("route.station.dayUnknown")}`}
+            {arrive ? (
+              <>
+                {" · "}
+                {when?.assumed ? (
+                  <span
+                    data-testid="assumed-day"
+                    style={{ color: "var(--ts-muted)", fontStyle: "italic" }}
+                  >
+                    {arrive}
+                    {depart && station.nights > 0 ? " – " + depart : ""}
+                    <span
+                      role="img"
+                      aria-label={t("route.station.dayAssumed")}
+                      title={t("route.station.dayAssumed")}
+                    >
+                      {" ⓘ"}
+                    </span>
+                  </span>
+                ) : (
+                  `${arrive}${depart && station.nights > 0 ? " – " + depart : ""}`
+                )}
+              </>
+            ) : (
+              ` · ${t("route.station.dayUnknown")}`
+            )}
           </p>
           <h3 className="t-card-title">{station.title}</h3>
           <p className="t-caption">

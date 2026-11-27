@@ -3,7 +3,7 @@ import { api } from "./client";
 
 /** What the server says it WOULD send, before anything is sent (owner, 2026-11-25). */
 export interface ServiceDisclosure {
-  serviceId: "aiSuggestionHelp" | "mapMatching";
+  serviceId: "aiSuggestionHelp" | "mapMatching" | "publicRouting";
   host: string;
   provider: string;
   location: "cloud" | "lan";

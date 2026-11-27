@@ -6,6 +6,8 @@ import Button from "../ui/Button";
 import Dialog from "../ui/Dialog";
 import { FormErrorBanner, navigateAfterSave, useDirtyGuard, useFormFailure } from "../form";
 import { useTranslation } from "../../hooks/useTranslation";
+import { UseCancelledError, withUseConsent } from "../../lib/api/serviceUse";
+import { useServiceUseConfirm } from "../ExternalServices/useServiceUseConfirm";
 import { toursApi } from "../../lib/api/tours";
 import { logger } from "../../lib/logger";
 import { isTransientSaveError, saveErrorKey } from "../../lib/saveErrorMessage";
@@ -71,6 +73,7 @@ export default function LegDialog({
   onChanged?: () => void;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["roadtrips", "trips", "common"]);
+  const confirm = useServiceUseConfirm();
   const navigate = useNavigate();
   const nf = new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 0 });
   const initial = legChoice(leg);
@@ -117,7 +120,10 @@ export default function LegDialog({
       if (modeChanged) {
         await toursApi.setLeg(undefined, routeId, from.id, to.id, { source: "straight", mode });
       }
-      const { fallbackReason } = await toursApi.routeLeg(undefined, routeId, from.id, to.id);
+      const { fallbackReason } = await withUseConsent(
+        (confirmation) => toursApi.routeLeg(undefined, routeId, from.id, to.id, confirmation),
+        confirm.ask
+      );
       if (fallbackReason === null) {
         markSaved();
         onSaved();
@@ -126,6 +132,11 @@ export default function LegDialog({
       setFallback(fallbackReason);
       if (modeChanged) onChanged?.();
     } catch (err) {
+      // Declining the public router leaves the mode saved and the line straight.
+      if (err instanceof UseCancelledError) {
+        onChanged?.();
+        return;
+      }
       logger.warn("Saving a roadtrip leg failed", err);
       failure.fail(saveErrorKey(err, "roadtrips:legDialog.error"));
     } finally {
@@ -183,142 +194,145 @@ export default function LegDialog({
   ];
 
   return (
-    <Dialog
-      open
-      onClose={onClose}
-      busy={saving}
-      dirty={dirty}
-      maxWidth={540}
-      title={
-        <span className="flex flex-col" style={{ gap: 4 }}>
-          <span>{t("roadtrips:legDialog.title")}</span>
-          <span className="t-caption" style={{ fontSize: 15 }}>
-            {from.title} → {to.title}
-          </span>
-        </span>
-      }
-      closeLabel={t("common:buttons.close")}
-      dismissLabel={t("common:buttons.cancel")}
-      action={
-        <Button variant="primary" disabled={saving} onClick={() => void apply()}>
-          {replacing ? t("roadtrips:legDialog.applyReplace") : t("roadtrips:legDialog.apply")}
-        </Button>
-      }
-    >
-      <div ref={failure.rootRef} className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
-        <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
-          <legend className="t-caption" style={{ marginBottom: 8 }}>
-            {t("roadtrips:legDialog.mode")}
-          </legend>
-          <div className="grid grid-cols-2" style={{ gap: 10 }}>
-            <button
-              type="button"
-              aria-pressed={mode === "road"}
-              disabled={keepsRecording}
-              onClick={() => setMode("road")}
-              style={tile(mode === "road", "var(--domain-roadtrip)")}
-            >
-              <svg width="80" height="8" aria-hidden>
-                <path
-                  d="M2 4h76"
-                  stroke="var(--domain-roadtrip)"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <span style={{ fontWeight: 800 }}>{t("roadtrips:timeline.leg.road")}</span>
-            </button>
-            <button
-              type="button"
-              aria-pressed={mode === "ferry"}
-              disabled={keepsRecording}
-              onClick={() => setMode("ferry")}
-              style={tile(mode === "ferry", "var(--domain-cruise)")}
-            >
-              <svg width="80" height="8" aria-hidden>
-                <path
-                  d="M2 4h76"
-                  stroke="var(--domain-cruise)"
-                  strokeWidth="3"
-                  strokeDasharray="1 7"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <span style={{ fontWeight: 800 }}>{t("roadtrips:timeline.leg.ferry")}</span>
-            </button>
-          </div>
-        </fieldset>
-
-        <fieldset className="flex flex-col" style={{ gap: 8, border: 0, padding: 0, margin: 0 }}>
-          <legend className="t-caption" style={{ marginBottom: 8 }}>
-            {t("roadtrips:legDialog.line")}
-          </legend>
-          {lines.map((l) => {
-            const on = l.id === effectiveLine;
-            return (
-              <label
-                key={l.id}
-                className="flex items-center"
-                style={{
-                  gap: 12,
-                  padding: "10px 12px",
-                  borderRadius: "var(--ts-radius-button)",
-                  border: `1px solid ${on ? "color-mix(in srgb, var(--ts-accent) 45%, transparent)" : "var(--ts-border)"}`,
-                  background: on ? "var(--ts-tile)" : "transparent",
-                  opacity: l.off ? 0.5 : 1,
-                  cursor: l.off ? "not-allowed" : "pointer",
-                }}
-              >
-                <input
-                  type="radio"
-                  name="leg-line"
-                  value={l.id}
-                  checked={on}
-                  disabled={l.off}
-                  onChange={() => setLine(l.id)}
-                />
-                <span className="flex flex-col" style={{ gap: 2 }}>
-                  <span style={{ fontWeight: 700, fontSize: 14 }}>{l.label}</span>
-                  <span className="t-caption">{l.hint}</span>
-                </span>
-              </label>
-            );
-          })}
-        </fieldset>
-
-        {keepsRecording && <p className="t-caption">{t("roadtrips:legDialog.trackModeHint")}</p>}
-        {replacing && (
-          <p role="status" style={{ fontSize: 13, color: "var(--ts-warn)" }}>
-            {t(
-              leg.source === "track"
-                ? "roadtrips:legDialog.replacesTrack"
-                : "roadtrips:legDialog.replacesDrawn"
-            )}
-          </p>
-        )}
-        <p className="t-caption">
-          {t("roadtrips:legDialog.distance", { km: nf.format(leg.distanceKm) })}
-        </p>
-        <FormErrorBanner
-          message={failure.failureKey ? t(failure.failureKey) : null}
-          onRetry={
-            failure.failureKey && isTransientSaveError(failure.failureKey)
-              ? () => void apply()
-              : undefined
-          }
-          retryDisabled={saving}
-        />
-        {fallback !== null && (
-          <div role="alert" className="flex flex-col" style={{ gap: 4, fontSize: 13 }}>
-            <span style={{ color: "var(--ts-warn)", fontWeight: 700 }}>
-              {t("roadtrips:legDialog.fallback", {
-                reason: t(`trips:tours.routing.reason.${fallback}`),
-              })}
+    <>
+      {confirm.dialog}
+      <Dialog
+        open
+        onClose={onClose}
+        busy={saving}
+        dirty={dirty}
+        maxWidth={540}
+        title={
+          <span className="flex flex-col" style={{ gap: 4 }}>
+            <span>{t("roadtrips:legDialog.title")}</span>
+            <span className="t-caption" style={{ fontSize: 15 }}>
+              {from.title} → {to.title}
             </span>
-            <span className="t-caption">{t("roadtrips:legDialog.fallbackKept")}</span>
-          </div>
-        )}
-      </div>
-    </Dialog>
+          </span>
+        }
+        closeLabel={t("common:buttons.close")}
+        dismissLabel={t("common:buttons.cancel")}
+        action={
+          <Button variant="primary" disabled={saving} onClick={() => void apply()}>
+            {replacing ? t("roadtrips:legDialog.applyReplace") : t("roadtrips:legDialog.apply")}
+          </Button>
+        }
+      >
+        <div ref={failure.rootRef} className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
+          <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+            <legend className="t-caption" style={{ marginBottom: 8 }}>
+              {t("roadtrips:legDialog.mode")}
+            </legend>
+            <div className="grid grid-cols-2" style={{ gap: 10 }}>
+              <button
+                type="button"
+                aria-pressed={mode === "road"}
+                disabled={keepsRecording}
+                onClick={() => setMode("road")}
+                style={tile(mode === "road", "var(--domain-roadtrip)")}
+              >
+                <svg width="80" height="8" aria-hidden>
+                  <path
+                    d="M2 4h76"
+                    stroke="var(--domain-roadtrip)"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <span style={{ fontWeight: 800 }}>{t("roadtrips:timeline.leg.road")}</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={mode === "ferry"}
+                disabled={keepsRecording}
+                onClick={() => setMode("ferry")}
+                style={tile(mode === "ferry", "var(--domain-cruise)")}
+              >
+                <svg width="80" height="8" aria-hidden>
+                  <path
+                    d="M2 4h76"
+                    stroke="var(--domain-cruise)"
+                    strokeWidth="3"
+                    strokeDasharray="1 7"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <span style={{ fontWeight: 800 }}>{t("roadtrips:timeline.leg.ferry")}</span>
+              </button>
+            </div>
+          </fieldset>
+
+          <fieldset className="flex flex-col" style={{ gap: 8, border: 0, padding: 0, margin: 0 }}>
+            <legend className="t-caption" style={{ marginBottom: 8 }}>
+              {t("roadtrips:legDialog.line")}
+            </legend>
+            {lines.map((l) => {
+              const on = l.id === effectiveLine;
+              return (
+                <label
+                  key={l.id}
+                  className="flex items-center"
+                  style={{
+                    gap: 12,
+                    padding: "10px 12px",
+                    borderRadius: "var(--ts-radius-button)",
+                    border: `1px solid ${on ? "color-mix(in srgb, var(--ts-accent) 45%, transparent)" : "var(--ts-border)"}`,
+                    background: on ? "var(--ts-tile)" : "transparent",
+                    opacity: l.off ? 0.5 : 1,
+                    cursor: l.off ? "not-allowed" : "pointer",
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="leg-line"
+                    value={l.id}
+                    checked={on}
+                    disabled={l.off}
+                    onChange={() => setLine(l.id)}
+                  />
+                  <span className="flex flex-col" style={{ gap: 2 }}>
+                    <span style={{ fontWeight: 700, fontSize: 14 }}>{l.label}</span>
+                    <span className="t-caption">{l.hint}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </fieldset>
+
+          {keepsRecording && <p className="t-caption">{t("roadtrips:legDialog.trackModeHint")}</p>}
+          {replacing && (
+            <p role="status" style={{ fontSize: 13, color: "var(--ts-warn)" }}>
+              {t(
+                leg.source === "track"
+                  ? "roadtrips:legDialog.replacesTrack"
+                  : "roadtrips:legDialog.replacesDrawn"
+              )}
+            </p>
+          )}
+          <p className="t-caption">
+            {t("roadtrips:legDialog.distance", { km: nf.format(leg.distanceKm) })}
+          </p>
+          <FormErrorBanner
+            message={failure.failureKey ? t(failure.failureKey) : null}
+            onRetry={
+              failure.failureKey && isTransientSaveError(failure.failureKey)
+                ? () => void apply()
+                : undefined
+            }
+            retryDisabled={saving}
+          />
+          {fallback !== null && (
+            <div role="alert" className="flex flex-col" style={{ gap: 4, fontSize: 13 }}>
+              <span style={{ color: "var(--ts-warn)", fontWeight: 700 }}>
+                {t("roadtrips:legDialog.fallback", {
+                  reason: t(`trips:tours.routing.reason.${fallback}`),
+                })}
+              </span>
+              <span className="t-caption">{t("roadtrips:legDialog.fallbackKept")}</span>
+            </div>
+          )}
+        </div>
+      </Dialog>
+    </>
   );
 }

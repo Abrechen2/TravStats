@@ -1095,6 +1095,8 @@
     "summary_one": "Packing list · {{count}} item",
     "summary_other": "Packing list · {{count}} items",
     "title": "Packing list",
+    "collapsed": "Packing list · {{done}}/{{total}} packed",
+    "addEntry": "+ Item",
     "progress": "{{done}} of {{total}} packed",
     "empty": "Nothing on the list yet. You share this packing list with the Companion app.",
     "loadFailed": "The packing list could not be loaded.",

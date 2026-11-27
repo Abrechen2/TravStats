@@ -87,6 +87,9 @@ export const DIENSTE_PAGE: RegistryPage = {
       {"id":"mapMatching","de":"An Straßen anpassen","en":"Snap to roads","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"karte","rows":[
 
       ]},
+      {"id":"publicRouting","de":"Öffentliches Routing","en":"Public routing","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"karte","rows":[
+
+      ]},
       {"id":"logos","de":"Logostream","en":"Logostream","level":"standard","scope":"account","audience":"admin","demoLocked":false,"serviceCategory":"karte","rows":[
         {"id":"logorefresh","kind":"action","level":"standard","scope":"instance","audience":"admin","demoLocked":false,"de":"Logos neu laden","en":"Reload logos","terms":{"de":"Passiert auch jede Nacht","en":"Also happens every night"}},
       ]},

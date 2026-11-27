@@ -534,7 +534,7 @@ router.get(
         route: toDto(route),
         stops,
         legs: legs.map(toLegDto),
-        routingAvailable: routing.configured,
+        routingAvailable: routing.configured || routing.publicFallback === true,
         routingFailing: routing.failing,
       });
     } catch (error) {

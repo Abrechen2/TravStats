@@ -201,6 +201,9 @@ export interface PlanVehicle {
   consumptionPer100: number | null;
   fuelPrice: number | null;
   fuelCurrency: string | null;
+  /** Daily driving limits; either, both or neither. A long drive is split by the lower one. */
+  maxDriveMinutesPerDay?: number | null;
+  maxDriveKmPerDay?: number | null;
 }
 export interface PlanStationWeather {
   stationId: string;
@@ -294,10 +297,39 @@ export interface PlanProposal {
     changes: { id: string; day: string | null; time: string | null; reason: string }[];
   };
 }
+/**
+ * A suggestion, never a station: the user confirms each stop. Positions lie on
+ * the straight line between the two stations (a router gives no waypoints
+ * here), so they are `approximate` — a place to look near, not a road.
+ */
+export interface DriveSplit {
+  stageId: string;
+  /** Days the drive takes at the vehicle's limit, at least 2. */
+  days: number;
+  /** One entry per day; `minutes` / `km` are null when the stage does not carry that figure. */
+  legs: { minutes: number | null; km: number | null }[];
+  /** The overnight stops between the days, in driving order (`days - 1` of them). */
+  stops: { lat: number; lon: number; afterMinutes: number | null; afterKm: number | null }[];
+  approximate: true;
+}
 export interface RouteSchedule {
-  stations: { stationId: string; arriveDay: string | null; departDay: string | null }[];
-  stages: { stageId: string; departDay: string | null; arriveDay: string | null }[];
+  /** `assumed`: the day rests on a drive without a duration taken to arrive the day it left. */
+  stations: {
+    stationId: string;
+    arriveDay: string | null;
+    departDay: string | null;
+    assumed?: boolean;
+  }[];
+  /** `assumed`: a drive without a duration, taken to arrive the day it left. */
+  stages: {
+    stageId: string;
+    departDay: string | null;
+    arriveDay: string | null;
+    assumed?: boolean;
+  }[];
   lastDay: string | null;
+  /** Drives longer than the vehicle's daily limit, with suggested overnight stops. */
+  splits?: DriveSplit[];
   conflicts: { kind: "anchor_shift"; anchorId: string; plannedDay: string; requiredDay: string }[];
   /** Consecutive stations no stage connects; the days after one stay unknown. */
   unresolved: { fromStationId: string; toStationId: string }[];

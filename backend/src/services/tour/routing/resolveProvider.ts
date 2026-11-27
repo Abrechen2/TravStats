@@ -5,6 +5,15 @@ import { isServiceDisabledByAdmin } from "../../externalServices/policy";
 import { createOpenRouteService } from "./openRouteService";
 import { createGraphHopper } from "./graphHopper";
 import { createCustomOsrm } from "./customOsrm";
+import { createPublicRouting, PUBLIC_ROUTING_BASE } from "./publicRouting";
+import { internetAllowed } from "../../internetGate";
+import { offReasonFor } from "../../externalServices/policy";
+import {
+  hostOf,
+  requireUseConsent,
+  type Disclosure,
+  type UseConfirmation,
+} from "../../externalServices/useConsent";
 import { providerDown, type ProviderDown } from "./providerHealth";
 import { ROUTING_OFF, ROUTING_PROVIDER_IDS, RouteProvider, RoutingProviderId } from "./types";
 
@@ -142,8 +151,55 @@ function pick(c: Candidate): Pick<RoutingResolution, "keySource" | "hint"> {
   return { keySource: c.keySource, hint: null };
 }
 
+/** What the public fallback would send, named before it is used (the stage or leg endpoints). */
+export function publicRoutingDisclosure(pointCount = 2): Disclosure {
+  return {
+    serviceId: "publicRouting",
+    host: hostOf(PUBLIC_ROUTING_BASE),
+    provider: "osrm",
+    location: "cloud",
+    fields: ["points"],
+    pointCount,
+    privacyZonesApplied: null,
+  };
+}
+
+export type RoutingChoice =
+  | { kind: "provider"; provider: RouteProvider }
+  | { kind: "none" }
+  | { kind: "confirm"; disclosure: Disclosure };
+
+/**
+ * The provider that serves this request, or what is missing. Only when NO
+ * routing provider is configured (automatic mode, nothing usable) does the
+ * public FOSSGIS router come in, and then only after the account confirmed it:
+ * without a confirmation (or a stored "Immer") the answer is `confirm` and
+ * nothing is sent. An explicit choice, "Aus", the catalogue switch, the account
+ * switch and the internet master switch all keep it out.
+ */
+export async function resolveRouteChoice(
+  userId: string | undefined,
+  confirmation?: UseConfirmation,
+  pointCount = 2
+): Promise<RoutingChoice> {
+  const r = await resolveRouting(userId);
+  if (r.provider) return { kind: "provider", provider: r.provider };
+  if (!userId || r.mode !== "auto" || r.hint !== "noProvider") return { kind: "none" };
+  if ((await offReasonFor("publicRouting", userId)) !== null) return { kind: "none" };
+  if (!(await internetAllowed())) return { kind: "none" };
+  const disclosure = publicRoutingDisclosure(pointCount);
+  const verdict = await requireUseConsent(userId, disclosure, confirmation);
+  if (!verdict.ok) return { kind: "confirm", disclosure: verdict.disclosure };
+  return { kind: "provider", provider: createPublicRouting() };
+}
+
+/**
+ * For callers with nobody to ask (background routing, imports): the configured
+ * provider, or the public one only where the account already said "Immer".
+ */
 export async function resolveRouteProvider(userId?: string): Promise<RouteProvider | null> {
-  return (await resolveRouting(userId)).provider;
+  const choice = await resolveRouteChoice(userId);
+  return choice.kind === "provider" ? choice.provider : null;
 }
 
 function resolveCustomProvider(baseUrl: string | null): RouteProvider | null {
@@ -177,9 +233,15 @@ export async function describeRoutingAvailability(userId?: string): Promise<{
   providerId: RoutingProviderId | null;
   /** The answering provider refuses requests right now (#411): legs fall back to straight. */
   failing: Pick<ProviderDown, "providerId" | "reason"> | null;
+  /** No provider is configured, but the public router may be used once the account confirms it. */
+  publicFallback?: true;
 }> {
   try {
-    const provider = await resolveRouteProvider(userId);
+    const choice = await resolveRouteChoice(userId);
+    // `configured` stays false (nothing is set up); a caller with a way to ask offers the buttons anyway.
+    if (choice.kind === "confirm")
+      return { configured: false, providerId: null, failing: null, publicFallback: true };
+    const provider = choice.kind === "provider" ? choice.provider : null;
     if (!provider) return { configured: false, providerId: null, failing: null };
     const down = providerDown(provider.id, undefined, provider.healthScope);
     return {

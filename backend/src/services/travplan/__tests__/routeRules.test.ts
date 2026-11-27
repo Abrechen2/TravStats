@@ -308,7 +308,7 @@ describe("route findings", () => {
       [a, b, c],
       [
         stage(a, b, { mode: "ferry", bookingId: real.id, durationMinutes: null }),
-        stage(b, c, { durationMinutes: null }),
+        stage(b, c, { mode: "rail", durationMinutes: null }),
       ],
       { bookings: [real] }
     );
@@ -319,6 +319,34 @@ describe("route findings", () => {
     const overnight = route([a, b], [stage(a, b, { overnight: true, durationMinutes: null })]);
     expect(codes(timed)).not.toContain("durationMissing");
     expect(codes(overnight)).not.toContain("durationMissing");
+  });
+
+  it("durationAssumed: an unrouted drive is a hint, not a durationMissing block", () => {
+    const a = station("A"),
+      b = station("B");
+    const state = route([a, b], [stage(a, b, { durationMinutes: null })]);
+    const found = routeFindings(state, TODAY);
+    expect(found.map((f) => f.code)).not.toContain("durationMissing");
+    const hint = found.filter((f) => f.code === "durationAssumed");
+    expect(hint.map((f) => f.params)).toEqual([{ from: "A", to: "B" }]);
+    expect(hint[0].severity).toBe("info");
+  });
+
+  it("driveSplit: a drive over the vehicle's daily limit gets a suggestion finding", () => {
+    const a = station("A"),
+      b = station("B");
+    const vehicle = {
+      kind: "motorhome" as const,
+      lengthM: null,
+      consumptionPer100: null,
+      fuelPrice: null,
+      fuelCurrency: null,
+      maxDriveMinutesPerDay: 300,
+      maxDriveKmPerDay: null,
+    };
+    const state = route([a, b], [stage(a, b, { durationMinutes: 700 })], { vehicle });
+    const found = routeFindings(state, TODAY).filter((f) => f.code === "driveSplit");
+    expect(found.map((f) => f.params)).toEqual([{ from: "A", to: "B", days: 3 }]);
   });
 
   it("decisions: conscious hides a finding, a dismissal only until its facts change", () => {
