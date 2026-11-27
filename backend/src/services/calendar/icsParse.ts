@@ -366,7 +366,8 @@ export function parseIcsTexts(texts: readonly string[], options: ParseOptions): 
       // One unparseable calendar object is skipped and counted, never the whole read.
       firstFailure ??= error;
       skippedEvents++;
-      const reason = code ?? "CALENDAR_PARSE";
+      // A library or programming error is named apart in the log, not hidden among bad input.
+      const reason = code ?? (error instanceof CalendarError ? "CALENDAR_PARSE" : "UNEXPECTED");
       skippedReasons[reason] = (skippedReasons[reason] ?? 0) + 1;
       continue;
     }
