@@ -24,10 +24,12 @@ const NS = "suggestionSources:plugins.maintenance";
 const PAGE_SIZE = 50;
 /**
  * The inbox lists only rows with evidence from the owner's own stops (rc.48); every other row of
- * the archive stays reachable here, and "ohne Standort" narrows the page to the imprecise ones.
+ * the archive stays reachable here. A filter is asked of the plugin, so it covers the whole
+ * archive and the paging counts filtered rows; a plugin that does not know filters answers
+ * unfiltered, and then the loaded page is narrowed here.
  */
-type RowFilter = "all" | "stop" | "noLocation";
-const ROW_FILTERS: readonly RowFilter[] = ["all", "stop", "noLocation"];
+type RowFilter = "all" | "withStops" | "noLocation";
+const ROW_FILTERS: readonly RowFilter[] = ["all", "withStops", "noLocation"];
 const NO_LOCATION_ISSUES: ReadonlySet<string> = new Set([
   "noCoordinates",
   "lowPrecision",
@@ -35,7 +37,7 @@ const NO_LOCATION_ISSUES: ReadonlySet<string> = new Set([
 ]);
 const matchesFilter = (row: MaintenanceRow, filter: RowFilter): boolean =>
   filter === "all" ||
-  (filter === "stop"
+  (filter === "withStops"
     ? row.proposals.some((p) => p.source === "stop")
     : row.issues.some((i) => NO_LOCATION_ISSUES.has(i)));
 
@@ -87,6 +89,7 @@ export default function PluginMaintenanceDialog({
         q: search,
         offset,
         limit: PAGE_SIZE,
+        ...(rowFilter === "all" ? {} : { filter: rowFilter }),
       });
       setLoad({ status: "done", list });
       setSelected((s) => s ?? list.rows.find((r) => !r.ignored)?.rowId ?? null);
@@ -95,7 +98,7 @@ export default function PluginMaintenanceDialog({
       console.warn("plugin maintenance list failed", key);
       setLoad({ status: "failed", key });
     }
-  }, [plugin.id, locale, search, offset]);
+  }, [plugin.id, locale, search, offset, rowFilter]);
 
   useEffect(() => {
     if (open) void reload();
@@ -230,7 +233,14 @@ export default function PluginMaintenanceDialog({
               className="flex flex-wrap gap-1.5"
             >
               {ROW_FILTERS.map((f) => (
-                <Chip key={f} active={rowFilter === f} onClick={() => setRowFilter(f)}>
+                <Chip
+                  key={f}
+                  active={rowFilter === f}
+                  onClick={() => {
+                    setOffset(0);
+                    setRowFilter(f);
+                  }}
+                >
                   {t(`${NS}.filter.${f}`)}
                 </Chip>
               ))}

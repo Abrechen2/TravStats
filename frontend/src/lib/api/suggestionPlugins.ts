@@ -117,6 +117,8 @@ export interface MaintenanceList {
   rows: MaintenanceRow[];
   totalRows?: number;
   offset?: number;
+  /** The filter the plugin applied; absent when it does not know filters (then the page is all rows). */
+  filter?: "withStops" | "noLocation";
   applied?: MaintenanceApplied[];
   pendingSearches?: number;
   geocoder?: boolean;
@@ -264,11 +266,22 @@ export const suggestionPluginsApi = {
   async maintenance(
     id: string,
     locale: "de" | "en",
-    page: { q?: string; offset?: number; limit?: number } = {}
+    page: {
+      q?: string;
+      offset?: number;
+      limit?: number;
+      filter?: "withStops" | "noLocation";
+    } = {}
   ): Promise<MaintenanceList> {
     // The plugin may take a while to list its rows (and TravStats sends the stops).
     const { data } = await api.get(`/settings/suggestion-plugins/${id}/maintenance`, {
-      params: { locale, ...(page.q ? { q: page.q } : {}), offset: page.offset, limit: page.limit },
+      params: {
+        locale,
+        ...(page.q ? { q: page.q } : {}),
+        ...(page.filter ? { filter: page.filter } : {}),
+        offset: page.offset,
+        limit: page.limit,
+      },
       timeout: 30_000,
     });
     return data;

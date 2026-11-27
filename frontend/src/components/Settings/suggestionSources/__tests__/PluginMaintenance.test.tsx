@@ -159,7 +159,7 @@ describe("plugin location maintenance", () => {
     expect(screen.getByTestId("maintenance-map").textContent).toBe("2 pins");
   });
 
-  it("keeps rows without stop evidence reachable under 'Alle Einträge ohne Standort'", async () => {
+  it("keeps rows without stop evidence reachable under 'Alle Einträge ohne Standort', filtered by the plugin", async () => {
     api.maintenance.mockResolvedValue({
       ...LIST,
       rows: [
@@ -191,10 +191,18 @@ describe("plugin location maintenance", () => {
     render(<PluginMaintenanceDialog plugin={PLUGIN} open onClose={() => {}} />);
     await screen.findByText("Nur ungenau");
     await userEvent.click(screen.getByRole("button", { name: /filter\.noLocation/ }));
+    // Asked of the plugin, from the first page, so the filter covers the whole archive.
+    await waitFor(() =>
+      expect(api.maintenance).toHaveBeenLastCalledWith(
+        "p1",
+        expect.anything(),
+        expect.objectContaining({ filter: "noLocation", offset: 0 })
+      )
+    );
     expect(screen.getByText("Nur ungenau")).toBeTruthy();
     expect(screen.getByText("MSA Zentralküche Sonthofen")).toBeTruthy();
     expect(screen.queryByText("Abweichend")).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: /filter\.stop/ }));
+    await userEvent.click(screen.getByRole("button", { name: /filter\.withStops/ }));
     expect(screen.queryByText("Nur ungenau")).toBeNull();
     expect(screen.getAllByTestId("maintenance-row")).toHaveLength(1);
   });

@@ -229,6 +229,11 @@ are `PluginMaintenance*V1` in the exported contract.
   what will be written; TravStats then asks `confirm` for a single-use ticket bound
   to exactly those values and sends it with `apply` or `undo`. A plugin MUST refuse
   a write without a valid ticket.
+- **Filters (`maintenanceFilter`, additive).** A proposals request may carry
+  `filter: "withStops"` (rows with a stop proposal) or `"noLocation"` (rows without a
+  usable position or street); the plugin filters before paging and echoes the
+  `filter` it applied. The inbox pages through every `withStops` row; a plugin that
+  echoes no filter is read the old way (its first 50 rows). Notices are never filtered.
 - **Who sends the stops.** TravStats sends, with each proposals request, the
   account's venue-named TravTrack findings of the last two years, deduped and
   rounded to the plugin's precision; unnamed stays of 20+ minutes outside privacy

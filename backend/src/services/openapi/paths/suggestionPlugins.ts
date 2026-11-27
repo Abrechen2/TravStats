@@ -277,6 +277,7 @@ registry.registerPath({
       q: z.string().max(100).optional(),
       offset: z.coerce.number().int().min(0).optional(),
       limit: z.coerce.number().int().min(1).max(300).optional(),
+      filter: z.enum(["withStops", "noLocation"]).optional(),
     }),
   },
   responses: {

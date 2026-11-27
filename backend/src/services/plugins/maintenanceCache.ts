@@ -14,9 +14,19 @@ import { egressBlock } from "../externalServices/egress";
 import logger from "../../utils/logger";
 import { assertMaintenanceCapable, candidateStops, runMaintenance } from "./maintenance";
 import { PLUGIN_SERVICE_ID, pluginView, type Precision } from "./registry";
+import { MAINTENANCE_MAX_ROWS } from "./contract";
 
-/** Rows kept per plugin; the settings dialog pages through the rest live. */
+/**
+ * Rows kept per plugin from a plugin without the `withStops` filter (its unfiltered first page);
+ * the settings dialog pages through the rest live.
+ */
 export const CACHE_ROWS = 50;
+/**
+ * Pages of `withStops` rows one refresh reads at most (300 rows each). Every row with a stop
+ * proposal is an inbox item, so the copy must not stop at the first page; the cap only bounds a
+ * runaway plugin.
+ */
+export const MAX_STOP_PAGES = 10;
 /** How old a copy may get before the poll refreshes it. */
 export const CACHE_PACE_MS = 6 * 60 * 60_000;
 /** After new stops, refresh no sooner than this (stops of one drive arrive in a burst). */
@@ -40,11 +50,7 @@ export async function refreshMaintenanceCache(
   try {
     await assertMaintenanceCapable(plugin);
     const { stops, withheld } = await candidateStops(plugin.userId, plugin.precision as Precision);
-    const data = await runMaintenance(plugin, "proposals", {
-      locale: lang,
-      stops,
-      limit: CACHE_ROWS,
-    });
+    const data = await readInboxRows(plugin, lang, stops);
     const values = {
       locale: lang,
       data: data as unknown as Prisma.InputJsonValue,
@@ -75,6 +81,44 @@ export async function refreshMaintenanceCache(
       update: values,
     });
   }
+}
+
+type ProposalsAnswer = Awaited<ReturnType<typeof runMaintenance>> & {
+  rows?: unknown[];
+  totalRows?: number;
+  filter?: string;
+};
+
+/**
+ * The inbox's rows: every row with a stop proposal, paged through with the `withStops` filter.
+ * A plugin that ignores the filter (no echo) answers its unfiltered list; then the first
+ * CACHE_ROWS rows are kept, which is what the copy held before filters existed.
+ */
+async function readInboxRows(
+  plugin: SuggestionPlugin,
+  locale: CacheLocale,
+  stops: unknown[]
+): Promise<ProposalsAnswer> {
+  const ask = async (offset: number) =>
+    (await runMaintenance(plugin, "proposals", {
+      locale,
+      stops,
+      filter: "withStops",
+      offset,
+      limit: MAINTENANCE_MAX_ROWS,
+    })) as ProposalsAnswer;
+  const first = await ask(0);
+  if (first.filter !== "withStops")
+    return { ...first, rows: (first.rows ?? []).slice(0, CACHE_ROWS) };
+  const rows = [...(first.rows ?? [])];
+  const total = first.totalRows ?? rows.length;
+  for (let page = 1; page < MAX_STOP_PAGES && rows.length < total; page++) {
+    const next = await ask(rows.length);
+    // A plugin that stops filtering or answers nothing mid-way ends the walk, never loops.
+    if (next.filter !== "withStops" || !next.rows?.length) break;
+    rows.push(...next.rows);
+  }
+  return { ...first, rows, offset: 0 };
 }
 
 /** New stops arrived: refresh the account's copies soon instead of at the 6 h pace. */

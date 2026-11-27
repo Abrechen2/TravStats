@@ -211,6 +211,15 @@ export const PLUGIN_CAPABILITY_MAINTENANCE = "maintenance";
 export const MAINTENANCE_MAX_STOPS = 2000;
 export const MAINTENANCE_MAX_ROWS = 300;
 export const MAINTENANCE_MAX_QUERY = 100;
+/**
+ * Additive row filters of a proposals request (rc.48), announced as the `maintenanceFilter`
+ * capability: `withStops` keeps rows with a stop proposal, `noLocation` rows without a usable
+ * position or street. The answer echoes the filter it applied; an older plugin ignores the field
+ * and echoes nothing, which is how TravStats tells the two apart without asking the hello first.
+ */
+export const PLUGIN_CAPABILITY_MAINTENANCE_FILTER = "maintenanceFilter";
+export const MAINTENANCE_FILTERS = ["withStops", "noLocation"] as const;
+export type MaintenanceFilter = (typeof MAINTENANCE_FILTERS)[number];
 
 export const maintenanceStopSchema = z
   .object({
@@ -234,6 +243,8 @@ export const maintenanceProposalsRequestSchema = z
     /** Additive: paging over the plugin's sorted list. */
     offset: z.number().int().min(0).optional(),
     limit: z.number().int().min(1).max(300).optional(),
+    /** Additive: narrows the rows before paging; notices stay unfiltered. */
+    filter: z.enum(MAINTENANCE_FILTERS).optional(),
   })
   .openapi("PluginMaintenanceProposalsRequestV1");
 
@@ -329,6 +340,8 @@ export const maintenanceProposalsResponseSchema = z
     rows: z.array(maintenanceRowSchema).max(MAINTENANCE_MAX_ROWS),
     totalRows: z.number().int().min(0).optional(),
     offset: z.number().int().min(0).optional(),
+    /** The filter the plugin applied; absent from a plugin that does not know filters. */
+    filter: z.enum(MAINTENANCE_FILTERS).optional(),
     applied: z.array(maintenanceAppliedSchema).max(200).optional(),
     /** Geocoder searches still running in the plugin; asking again later shows more. */
     pendingSearches: z.number().int().min(0).optional(),
