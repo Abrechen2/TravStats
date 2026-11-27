@@ -165,6 +165,7 @@ const ENTRY_LIST_PATHS: Record<EntryType, string> = {
   busJourney: "/bus/{id}/documents",
   ferryJourney: "/ferry/{id}/documents",
   tripExpense: "/expenses/{id}/documents",
+  tour: "/tours/{id}/documents",
 };
 
 for (const type of ENTRY_TYPES) {

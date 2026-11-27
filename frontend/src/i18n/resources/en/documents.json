@@ -24,7 +24,8 @@
     "pdf": "PDF",
     "eml": "Email",
     "emailText": "Email text",
-    "pkpass": "Wallet pass"
+    "pkpass": "Wallet pass",
+    "gpx": "GPX track"
   },
   "kind": {
     "invoice": "Invoice",
@@ -120,7 +121,8 @@
       "rentalBooking": "Rental",
       "busJourney": "Bus ride",
       "ferryJourney": "Ferry",
-      "tripExpense": "Expense"
+      "tripExpense": "Expense",
+      "tour": "Roadtrip / tour"
     },
     "errors": {
       "failed": "The link could not be saved.",

@@ -1,3 +1,4 @@
+import { repointLinks } from "../documents/documentLinks";
 import { prisma, type DbTransaction } from "../../db";
 
 /**
@@ -21,7 +22,10 @@ export async function standaloneExpenseCount(routeIds: readonly string[]): Promi
   });
 }
 
-/** Re-file the costs of each section that has a trip onto that trip. Call inside the delete's transaction. */
+/**
+ * Re-file the costs and the documents of each section that has a trip onto that trip (the
+ * ride evidence of a removed roadtrip is not lost with it). Call inside the delete's transaction.
+ */
 export async function handExpensesToTrips(
   tx: DbTransaction,
   routeIds: readonly string[]
@@ -42,5 +46,6 @@ export async function handExpensesToTrips(
         legToStopId: null,
       },
     });
+    await repointLinks(tx, { type: "tour", ids: [route.id] }, { type: "trip", id: route.tripId! });
   }
 }

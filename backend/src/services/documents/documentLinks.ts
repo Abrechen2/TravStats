@@ -57,6 +57,7 @@ export const LINK_TARGETS = {
   busJourney: { column: "busJourneyId" },
   ferryJourney: { column: "ferryJourneyId" },
   tripExpense: { column: "tripExpenseId" },
+  tour: { column: "tripRouteId" },
 } as const satisfies Record<EntryType, { column: TargetColumn }>;
 
 /**
@@ -73,13 +74,11 @@ export const DOMAIN_LINK_TARGETS: Readonly<Record<DomainKey, EntryType | { notLi
   rental: "rentalBooking",
   bus: "busJourney",
   ferry: "ferryJourney",
-  roadtrip: {
-    notLinked:
-      "A roadtrip is a section (TripRoute) of a trip, not an entry of its own; its documents link to the trip, its rental or its expenses.",
-  },
+  // A roadtrip and a day tour are both a TripRoute; its evidence (ride screenshot, GPX) links to it.
+  roadtrip: "tour",
   tour: {
     notLinked:
-      "A day tour is a TripRoute section of a trip, not an entry of its own; its documents link to the trip or its expenses.",
+      "A day tour is a TripRoute like a roadtrip; its documents link through the `tour` entry type that the roadtrip domain names.",
   },
 };
 
@@ -119,6 +118,7 @@ type EntryReader = Pick<
   | "busJourney"
   | "ferryJourney"
   | "tripExpense"
+  | "tripRoute"
 >;
 
 /** 404 unless the entry exists AND belongs to the user — a stranger's entry is not an entry. */
@@ -159,6 +159,9 @@ export async function assertEntryOwnedIn(
       break;
     case "tripExpense":
       found = await db.tripExpense.findFirst(args);
+      break;
+    case "tour":
+      found = await db.tripRoute.findFirst(args);
       break;
   }
   if (!found) throw new AppError("Entry not found", 404, "DOCUMENT_ENTRY_NOT_FOUND");

@@ -14,7 +14,7 @@
  * eml / emailText 2 MB, pkpass 5 MB.
  */
 
-export const DOCUMENT_FORMATS = ["image", "pdf", "eml", "emailText", "pkpass"] as const;
+export const DOCUMENT_FORMATS = ["image", "pdf", "eml", "emailText", "pkpass", "gpx"] as const;
 export type DocumentFormat = (typeof DOCUMENT_FORMATS)[number];
 
 export const DOCUMENT_KINDS = ["invoice", "booking", "boardingPass", "ticket", "other"] as const;
@@ -47,6 +47,8 @@ export const ENTRY_TYPES = [
   "ferryJourney",
   /** An expense's receipt (forgejo#150). */
   "tripExpense",
+  /** A roadtrip or tour section itself — its ride screenshot (GitHub #415). */
+  "tour",
 ] as const;
 export type EntryType = (typeof ENTRY_TYPES)[number];
 
@@ -58,6 +60,7 @@ export const DOCUMENT_SIZE_LIMITS: Record<DocumentFormat, number> = {
   eml: 2 * MB,
   emailText: 2 * MB,
   pkpass: 5 * MB,
+  gpx: 10 * MB,
 };
 
 /** The largest any single document may be — the multer ceiling. */
@@ -97,6 +100,21 @@ function detectImage(buffer: Buffer): DetectedFormat | null {
 }
 
 /** Text, as far as a first check can tell: no NUL byte in the first 64 KB. */
+/**
+ * A GPX file by its content: text whose root element is `<gpx`, after an optional XML
+ * declaration, comments and whitespace. Anything that declares a DTD or an entity is
+ * refused outright — the file is only ever stored and handed back, never parsed here,
+ * but a document that is an XML-bomb or XXE vehicle for the next tool that opens it
+ * is not accepted.
+ */
+function looksLikeGpx(buffer: Buffer): boolean {
+  if (buffer.includes(0)) return false;
+  const text = buffer.toString("utf8");
+  if (/<!DOCTYPE|<!ENTITY/i.test(text)) return false;
+  const head = text.replace(/^\uFEFF/, "").replace(/^\s*(<\?xml[^>]*\?>|<!--[\s\S]*?-->|\s)*/, "");
+  return /^<gpx[\s>]/.test(head);
+}
+
 function looksLikeText(buffer: Buffer): boolean {
   const sample = buffer.subarray(0, 64 * 1024);
   return !sample.includes(0);
@@ -130,6 +148,9 @@ export function detectDocumentFormat(
     }
     return null;
   }
+
+  if (looksLikeGpx(buffer))
+    return { format: "gpx", mimetype: "application/gpx+xml", extension: ".gpx" };
 
   if (looksLikeText(buffer)) {
     if (name.endsWith(".eml") || mime === "message/rfc822") {

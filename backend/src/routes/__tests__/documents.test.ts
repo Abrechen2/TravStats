@@ -75,6 +75,7 @@ describe("documents routes", () => {
       eml: 2 * 1024 * 1024,
       emailText: 2 * 1024 * 1024,
       pkpass: 5 * 1024 * 1024,
+      gpx: 10 * 1024 * 1024,
     });
   });
 

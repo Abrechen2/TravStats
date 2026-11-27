@@ -90,6 +90,7 @@ const FORMAT_HINT_MIME: Partial<Record<DocumentFormat, string>> = {
   eml: "message/rfc822",
   emailText: "text/plain",
   pkpass: "application/vnd.apple.pkpass",
+  gpx: "application/gpx+xml",
 };
 
 /**
@@ -163,6 +164,7 @@ const NO_OWNER: Prisma.DocumentWhereInput = {
   busJourneyId: null,
   ferryJourneyId: null,
   tripExpenseId: null,
+  tripRouteId: null,
 };
 
 function ownerWhere(entry: EntryRef): Prisma.DocumentWhereInput {
@@ -249,7 +251,7 @@ export function checkDocumentFormat(input: FormatCheckInput): DetectedFormat {
   }
   if (!detected) {
     throw new AppError(
-      "Unsupported document. Accepted: JPEG, PNG, WebP or HEIC images, PDF, .eml mail files, plain text, Wallet passes (.pkpass).",
+      "Unsupported document. Accepted: JPEG, PNG, WebP or HEIC images, PDF, .eml mail files, plain text, Wallet passes (.pkpass), GPX tracks.",
       415
     );
   }

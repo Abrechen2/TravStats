@@ -17,7 +17,7 @@ import type { ExtractValuesRequest, ExtractValuesResult } from "../extractValues
  * `{success, data}` family (ADR 0001), so every read here unwraps `.data.data`.
  */
 
-export const DOCUMENT_FORMATS = ["image", "pdf", "eml", "emailText", "pkpass"] as const;
+export const DOCUMENT_FORMATS = ["image", "pdf", "eml", "emailText", "pkpass", "gpx"] as const;
 export type DocumentFormat = (typeof DOCUMENT_FORMATS)[number];
 
 export const DOCUMENT_KINDS = ["invoice", "booking", "boardingPass", "ticket", "other"] as const;
@@ -35,6 +35,7 @@ export const DOCUMENT_ENTRY_TYPES = [
   "busJourney",
   "ferryJourney",
   "tripExpense",
+  "tour",
 ] as const;
 export type DocumentEntryType = (typeof DOCUMENT_ENTRY_TYPES)[number];
 
@@ -212,6 +213,8 @@ const ENTRY_LIST_PATH: Record<DocumentEntryType, (id: string) => string> = {
   ferryJourney: (id) => `/ferry/${id}/documents`,
   // A roadtrip or trip cost's receipt (forgejo#150).
   tripExpense: (id) => `/expenses/${id}/documents`,
+  // A roadtrip or day tour (its TripRoute id; GitHub #415).
+  tour: (id) => `/tours/${id}/documents`,
 };
 
 export function documentListPath(entry: DocumentEntryRef): string {

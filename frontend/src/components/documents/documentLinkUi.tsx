@@ -32,6 +32,9 @@ export function entryHref(entry: Pick<DocumentEntryInfo, "type" | "id" | "parent
       return `/ferry/${id}`;
     case "tripExpense":
       return `/trips/${parent}`;
+    case "tour":
+      // A roadtrip has no parent id; a day tour carries its own (the tour editor page).
+      return entry.parentId ? `/tours/${id}` : `/roadtrips/${id}`;
   }
 }
 

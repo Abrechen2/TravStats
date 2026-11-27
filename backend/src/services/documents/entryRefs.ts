@@ -229,6 +229,23 @@ export async function describeEntries(
             })
           )
         ),
+    wanted("tour") &&
+      prisma.tripRoute
+        .findMany({
+          where: where("tour"),
+          select: { id: true, name: true, kind: true, tripId: true },
+        })
+        .then((rows) =>
+          rows.forEach((r) =>
+            // `parentId` names the page that shows the entry: a roadtrip has its own
+            // (`/roadtrips/:id`, no parent), a day tour opens in the tour editor.
+            put("tour", r.id, {
+              label: r.name,
+              parentId: r.kind === "roadtrip" ? null : r.id,
+              tripId: r.tripId,
+            })
+          )
+        ),
   ]);
   return out;
 }

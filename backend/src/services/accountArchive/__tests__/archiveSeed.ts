@@ -461,6 +461,14 @@ export async function seedAccount(client: Client, files: SeedFiles): Promise<voi
     currency: "EUR",
     updated_at: NOW,
   });
+  // A roadtrip with its ride evidence (GitHub #415): the archive must carry the tour link.
+  await insert(client, "trip_routes", {
+    id: "az-route-0001",
+    user_id: U,
+    name: "Alpine day ride",
+    mode: "road",
+    updated_at: NOW,
+  });
   await insert(client, "receipt_uploads", {
     id: "az-receipt-0001",
     filename: files.write("receipts", "receipt-1.pdf", BYTES.pdf("receipt bytes")).name,
@@ -558,6 +566,8 @@ async function seedDocuments(client: Client, files: SeedFiles): Promise<void> {
   await link("az-doc-ferry-0001", { ferry_journey_id: "az-ferry-0001" }, "primary", "user");
   await doc("az-doc-visit-0001", "visit", { place_visit_id: "az-visit-0001" });
   await link("az-doc-visit-0001", { place_visit_id: "az-visit-0001" }, "primary", "user");
+  await doc("az-doc-tour-0001", "ride screenshot", { trip_route_id: "az-route-0001" });
+  await link("az-doc-tour-0001", { trip_route_id: "az-route-0001" }, "primary", "user");
   await doc("az-doc-unfiled-0001", "unfiled original");
 }
 

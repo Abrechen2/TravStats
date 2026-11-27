@@ -29,6 +29,7 @@ const FIELDS: Record<EntryType, Fields> = {
   busJourney: { text: ["lineName", "depStationName", "arrStationName"], date: "departureTime" },
   ferryJourney: { text: ["vesselName", "depStationName", "arrStationName"], date: "departureTime" },
   tripExpense: { text: ["note", "kind"], date: "date" },
+  tour: { text: ["name"] },
 };
 
 const DATE_TERM = /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/;

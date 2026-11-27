@@ -39,6 +39,7 @@ import { isTravellerEntryType } from "../../lib/api/entryTravellers";
 import LinkDocumentDialog from "./LinkDocumentDialog";
 import TripDocumentDialog from "./TripDocumentDialog";
 import InlineError from "../ui/InlineError";
+import { usePhotoViewer } from "../common/photoViewer/usePhotoViewer";
 
 interface Props {
   /** Which record these documents hang off. One of the five the API serves. */
@@ -68,6 +69,12 @@ interface Props {
    * first load: that is no change.
    */
   onChanged?: () => void;
+  /**
+   * An image opens in the shared photo viewer (zoom, arrows) instead of a new
+   * tab; a modified click still opens the file. For the evidence of a roadtrip,
+   * which is mostly screenshots.
+   */
+  previewImages?: boolean;
 }
 
 /** The formats the text parsers read; an image or a wallet pass is not offered. */
@@ -111,6 +118,7 @@ export default function DocumentsSection({
   extract,
   rentalCategories = false,
   onChanged,
+  previewImages = false,
 }: Props): JSX.Element {
   const { t } = useTranslation(["documents", "common"]);
   const format = useDisplayFormat();
@@ -128,6 +136,7 @@ export default function DocumentsSection({
    */
   const [open, setOpen] = useState<boolean>(layout === "card");
   const [documents, setDocuments] = useState<TravelDocument[]>([]);
+  const imageViewer = usePhotoViewer();
   const [loadFailed, setLoadFailed] = useState(false);
   const [limits, setLimits] = useState<DocumentLimits | null>(null);
   const [busy, setBusy] = useState(false);
@@ -494,6 +503,16 @@ export default function DocumentsSection({
           target="_blank"
           rel="noopener noreferrer"
           aria-label={t("documents:openLabel", { name: doc.displayName })}
+          onClick={(e) => {
+            if (!previewImages || doc.format !== "image" || e.metaKey || e.ctrlKey || e.shiftKey)
+              return;
+            e.preventDefault();
+            const images = documents.filter((d) => d.format === "image");
+            imageViewer.open(
+              images.map((d) => ({ id: d.id, url: documentFileUrl(d), caption: d.displayName })),
+              images.findIndex((d) => d.id === doc.id)
+            );
+          }}
           className="min-w-0 flex-1 truncate text-sm"
           style={{ color: "var(--ts-text-bright)", fontWeight: 600 }}
         >
@@ -724,6 +743,7 @@ export default function DocumentsSection({
           onPick={(companionId) => void handlePerson(rowDialog.doc, companionId)}
         />
       )}
+      {imageViewer.viewer}
       {linkTarget && (
         <LinkDocumentDialog
           document={linkTarget}

@@ -69,6 +69,8 @@ const ENTRY_LIST_PATHS: Record<EntryType, string> = {
   // An expense lives under three path families (trip, roadtrip, section);
   // its receipts under the one that needs no owner to be named.
   tripExpense: "/expenses/:id/documents",
+  // A roadtrip or day tour: the TripRoute id, as under `/tours/:routeId`.
+  tour: "/tours/:id/documents",
 };
 
 const toDate = (value: string | null | undefined): Date | null | undefined =>
@@ -241,7 +243,7 @@ router.get(
 );
 
 /** Formats a browser should hand to the user rather than render in the app's origin. */
-const DOWNLOAD_ONLY = new Set(["eml", "pkpass"]);
+const DOWNLOAD_ONLY = new Set(["eml", "pkpass", "gpx"]);
 
 router.get(
   "/documents/:id/file",

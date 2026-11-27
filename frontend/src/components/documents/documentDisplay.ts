@@ -15,6 +15,7 @@ export const DOCUMENT_FORMAT_ICON: Record<DocumentFormat, IconName> = {
   eml: "mail",
   emailText: "mail",
   pkpass: "smartphone",
+  gpx: "route",
 };
 
 /** Extension → format, for the formats whose MIME type a browser rarely sets. */
@@ -22,6 +23,7 @@ const EXTENSION_FORMAT: Record<string, DocumentFormat> = {
   eml: "eml",
   txt: "emailText",
   pkpass: "pkpass",
+  gpx: "gpx",
   pdf: "pdf",
 };
 
@@ -40,6 +42,7 @@ export function guessDocumentFormat(file: File): DocumentFormat | null {
   if (mime === "application/pdf") return "pdf";
   if (mime === "message/rfc822") return "eml";
   if (mime === "application/vnd.apple.pkpass") return "pkpass";
+  if (mime === "application/gpx+xml") return "gpx";
   const extension = file.name.toLowerCase().split(".").pop() ?? "";
   if (mime === "text/plain") return EXTENSION_FORMAT[extension] ?? "emailText";
   return EXTENSION_FORMAT[extension] ?? null;
