@@ -67,6 +67,10 @@ const managedCompanion = registry.register(
       id: z.string(),
       name: z.string(),
       linkedUser: person.nullable(),
+      linkedRemoteId: z
+        .string()
+        .nullable()
+        .describe("The person on another server this companion is linked to, if any"),
       uses: perKind(z.number().int()).describe("Entries per visible kind, planned ones included"),
       hiddenUses: z.number().int().describe("Entries in domains switched off"),
       expensesPaid: z.number().int(),

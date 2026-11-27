@@ -317,6 +317,7 @@ describe("companions — manage", () => {
         id: norbert.id,
         name: "Norbert",
         linkedUser: { id: ben.id, username: ben.username, displayName: "ben" },
+        linkedRemoteId: null,
         uses: { flight: 1, trip: 0, cruise: 0, rail: 0 },
         hiddenUses: 1,
         expensesPaid: 0,
@@ -325,6 +326,30 @@ describe("companions — manage", () => {
         inUse: true,
       },
     ]);
+  });
+
+  // Sharing UAT 2: a companion linked to a person on another server was listed twice under
+  // "Personen" ("kein Konto" and the connection) — the list could not see the remote link.
+  it("names the person on another server a companion is linked to", async () => {
+    const remote = await prisma.remoteShareAccount.create({
+      data: {
+        userId: anna.id,
+        origin: "https://far.example.org",
+        channel: `${PREFIX}chan`,
+        localChannel: `${PREFIX}local`,
+        username: "norbert",
+        displayName: "Norbert",
+        state: "active",
+      },
+    });
+    const norbert = await companion(anna.id, "Norbert");
+    await prisma.companion.update({ where: { id: norbert.id }, data: { linkedRemoteId: remote.id } });
+    const res = await request(app)
+      .get("/api/v1/companions/manage")
+      .set("Cookie", anna.cookie)
+      .expect(200);
+    const row = res.body.companions.find((c: { id: string }) => c.id === norbert.id);
+    expect(row.linkedRemoteId).toBe(remote.id);
   });
 
   // Found by the Codex review: usage was checked, then the row deleted in a

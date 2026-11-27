@@ -21,6 +21,8 @@ export interface ManagedCompanion {
   id: string;
   name: string;
   linkedUser: CompanionPerson | null;
+  /** The person on another server this companion is (a connection id); absent on older servers. */
+  linkedRemoteId?: string | null;
   /** Entries per kind the user sees, planned ones included. */
   uses: Partial<Record<CompanionUseKind, number>>;
   /** Entries in domains switched off — they still keep the companion from a delete. */

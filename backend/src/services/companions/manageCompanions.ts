@@ -74,6 +74,11 @@ export interface ManagedCompanion {
   id: string;
   name: string;
   linkedUser: SharePerson | null;
+  /**
+   * The person on another server this companion is (a remote share account id), or null. Lets the
+   * people list show the companion and the connection as one person (sharing UAT 2).
+   */
+  linkedRemoteId: string | null;
   /** Entries this companion is on, per kind the caller sees — planned ones included. */
   uses: Partial<Record<CompanionUseKind, number>>;
   /** Entries in domains the caller has switched off; they still block a delete. */
@@ -120,6 +125,7 @@ export async function listManagedCompanions(
       id: row.id,
       name: row.displayName,
       linkedUser: row.linkedUser ? toPerson(row.linkedUser) : null,
+      linkedRemoteId: row.linkedRemoteId,
       uses: Object.fromEntries(kinds.map((kind) => [kind, of(kind)])),
       hiddenUses: all - shown,
       expensesPaid: row._count.expensesPaid,

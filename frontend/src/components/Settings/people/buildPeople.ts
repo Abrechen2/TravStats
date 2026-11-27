@@ -48,6 +48,9 @@ export interface PeopleSources {
   comparisonRequests: readonly RequestView[] | null;
 }
 
+/** Connection states drawn as a person row; the others are requests above the list or gone. */
+const LISTED_STATES: ReadonlySet<Connection["state"]> = new Set(["pending_out", "active"]);
+
 const lower = (text: string): string => text.trim().toLowerCase();
 const stripSlash = (origin: string): string => lower(origin).replace(/\/+$/, "");
 const live = (list: readonly ShareConsent[]): ShareConsent[] =>
@@ -94,23 +97,48 @@ export function buildPeople(src: PeopleSources): {
   };
   const people: PersonEntry[] = [];
   const covered = new Set<string>();
+  // A companion linked to a person on another server is that person: one row, not two
+  // ("kein Konto" plus the connection — sharing UAT 2).
+  const remoteRows = new Map<string, Connection>();
+  for (const c of src.connections ?? []) remoteRows.set(c.id, c);
+  const takenRemote = new Set<string>();
   for (const companion of src.companions ?? []) {
     const user = companion.linkedUser;
     const consent = user ? (outgoing.get(user.id) ?? null) : null;
     if (user) covered.add(user.id);
+    const conn = !user && companion.linkedRemoteId ? remoteRows.get(companion.linkedRemoteId) : null;
+    const remote = conn && LISTED_STATES.has(conn.state) ? conn : null;
+    if (remote) takenRemote.add(remote.id);
     people.push({
       key: `c:${companion.id}`,
       name: companion.name,
       companion,
       account: user
         ? { kind: "local", userId: user.id, username: user.username, displayName: user.displayName }
-        : null,
-      status: user ? statusOf(consent, true) : "unlinked",
+        : remote
+          ? {
+              kind: "remote",
+              origin: remote.origin,
+              username: remote.username,
+              displayName: remote.displayName,
+            }
+          : null,
+      status: user
+        ? statusOf(consent, true)
+        : remote
+          ? remote.state === "active"
+            ? "connected"
+            : "requested"
+          : "unlinked",
       shareConsent: consent,
       incomingConsent: user ? takeIncoming(user.id) : null,
-      connection: null,
+      connection: remote,
       paired: null,
-      comparison: user ? claimComparison(user.username, null) : null,
+      comparison: user
+        ? claimComparison(user.username, null)
+        : remote
+          ? claimComparison(remote.username, remote.origin)
+          : null,
     });
   }
   // Accounts that answered or were asked but are nobody's companion yet.
@@ -151,8 +179,7 @@ export function buildPeople(src: PeopleSources): {
   }
   // People on other servers: one row per connection that is not a question waiting on the caller.
   for (const c of src.connections ?? []) {
-    if (c.state === "pending_in" || c.state === "reconfirm") continue;
-    if (c.state === "declined" || c.state === "revoked") continue;
+    if (!LISTED_STATES.has(c.state) || takenRemote.has(c.id)) continue;
     people.push({
       key: `r:${c.id}`,
       name: c.displayName,

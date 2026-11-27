@@ -245,6 +245,32 @@ describe("PeopleSection", () => {
     await waitFor(() => expect(share.answerConsent).toHaveBeenCalledWith("in1", "decline"));
   });
 
+  // Sharing UAT 2: the owner's companion "Norbert Wittke", linked to his father's account on
+  // another server, was listed twice — "kein Konto" and the connection.
+  it("shows a companion linked to a person on another server as ONE row", async () => {
+    beta.add("federatedTripSharing");
+    setup({
+      companions: [companion({ name: "Norbert", linkedRemoteId: "cn9" })],
+      connections: [
+        {
+          id: "cn9",
+          origin: "https://far.example.org",
+          username: "norbert",
+          displayName: "Norbert W.",
+          state: "active",
+          mine: { plans: false, stats: "off", achievements: false, leaderboard: false, tripOffers: true },
+          theirs: { plans: false, stats: "off", achievements: false, leaderboard: false, tripOffers: true },
+        },
+      ],
+    });
+    expect(await screen.findByText("Norbert")).toBeTruthy();
+    expect(screen.queryByText("Norbert W.")).toBeNull();
+    expect(
+      screen.getAllByRole("listitem").filter((li) => li.textContent?.includes("Norbert"))
+    ).toHaveLength(1);
+    expect(screen.getByText(/friends\.account\.remote/)).toBeTruthy();
+  });
+
   it("accepts and declines a request from a person on another server", async () => {
     conns.accept.mockResolvedValue({} as never);
     conns.decline.mockResolvedValue({} as never);
