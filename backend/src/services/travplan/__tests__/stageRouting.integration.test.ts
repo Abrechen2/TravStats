@@ -19,9 +19,15 @@ jest.mock("../availability", () => ({
 import type { RouteProvider, RouteResult } from "../../tour/routing/types";
 
 const mockResolve = jest.fn<Promise<RouteProvider | null>, [string?]>();
+const mockConfirm = jest.fn<unknown, [string | undefined, unknown]>();
 const mockGate = jest.fn<boolean, []>();
 jest.mock("../../tour/routing/resolveProvider", () => ({
-  resolveRouteProvider: (userId?: string) => mockResolve(userId),
+  resolveRouteChoice: async (userId?: string, confirmation?: unknown) => {
+    const disclosure = mockConfirm(userId, confirmation);
+    if (disclosure) return { kind: "confirm", disclosure };
+    const provider = await mockResolve(userId);
+    return provider ? { kind: "provider", provider } : { kind: "none" };
+  },
 }));
 jest.mock("../../tour/routing/providerBudget", () => ({
   providerCallGate: () => () => mockGate(),
@@ -68,6 +74,7 @@ beforeAll(async () => {
 });
 beforeEach(() => {
   mockResolve.mockReset();
+  mockConfirm.mockReset().mockReturnValue(null);
   mockGate.mockReset().mockReturnValue(true);
 });
 afterAll(async () => {
@@ -161,6 +168,32 @@ describe("stage routing", () => {
       metricsSource: "routed",
       fallbackReason: null,
     });
+  });
+
+  it("answers 409 CONFIRMATION_REQUIRED with the disclosure and changes nothing when the public router needs a yes first", async () => {
+    const disclosure = { serviceId: "publicRouting", host: "routing.openstreetmap.de" };
+    mockConfirm.mockReturnValue(disclosure);
+    const p = await routePlan();
+    const before = p.revision();
+    const r = await p.route();
+    expect(r.status).toBe(409);
+    expect(r.body).toMatchObject({ code: "CONFIRMATION_REQUIRED", disclosure });
+    expect(mockResolve).not.toHaveBeenCalled();
+    // Nothing was written: the same revision is still current.
+    expect(p.revision()).toBe(before);
+  });
+
+  it("hands the account's confirmation on to the router choice", async () => {
+    mockResolve.mockResolvedValue(providerAnswering(road()));
+    const p = await routePlan();
+    const confirmation = { mode: "once", target: "osrm@routing.openstreetmap.de" };
+    const r = await post("/trips/" + p.created.tripId + "/plan/stages/" + p.stageId + "/route", {
+      clientRef: randomUUID(),
+      baseRevision: p.revision(),
+      confirmation,
+    });
+    expect(r.status).toBe(200);
+    expect(mockConfirm).toHaveBeenCalledWith(owner, confirmation);
   });
 
   it("no provider keeps stored metrics and records no_provider", async () => {

@@ -75,7 +75,7 @@ describe("LegDialog", () => {
     fireEvent.click(screen.getByRole("radio", { name: /roadtrips:legDialog.routed/ }));
     fireEvent.click(screen.getByText("roadtrips:legDialog.apply"));
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
-    expect(toursApi.routeLeg).toHaveBeenCalledWith(undefined, "rt", "a", "b");
+    expect(toursApi.routeLeg).toHaveBeenCalledWith(undefined, "rt", "a", "b", undefined);
   });
 
   it("stays open and says why when the provider could not route the leg", async () => {

@@ -4400,6 +4400,20 @@
           "ad": 1
         },
         {
+          "id": "publicRouting",
+          "cat": "karte",
+          "svc": {
+            "n": ["Öffentliches Routing", "Public routing"],
+            "de": "Öffentlicher FOSSGIS-Server als Ersatz, nur nach Erlaubnis",
+            "en": "Public FOSSGIS server as a fallback, only with permission",
+            "st": ["Ein", "On"],
+            "tone": "good"
+          },
+          "use": ["on"],
+          "rows": [],
+          "ad": 1
+        },
+        {
           "id": "logos",
           "cat": "karte",
           "svc": {

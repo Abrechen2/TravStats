@@ -1,4 +1,5 @@
 import { api } from "./client";
+import type { UseConfirmation } from "./serviceUse";
 import type { TourLegTrackCoverage } from "../../types/trackCoverage";
 import type { RoutingFailing } from "../../types/roadtrip";
 import type { RoadtripVehicle, TourActivity } from "../../shared/tour/roadtrip";
@@ -267,10 +268,12 @@ export const toursApi = {
     tripId: string | undefined,
     routeId: string,
     fromStopId: string,
-    toStopId: string
+    toStopId: string,
+    confirmation?: UseConfirmation
   ): Promise<RouteLegResult> => {
     const { data } = await api.post<{ leg: TourLeg; fallbackReason?: RouteFallbackReason | null }>(
-      `${sectionPath(tripId, routeId)}/legs/${fromStopId}/${toStopId}/route`
+      `${sectionPath(tripId, routeId)}/legs/${fromStopId}/${toStopId}/route`,
+      confirmation ? { confirmation } : undefined
     );
     // A server from before the reason existed: a low-confidence answer is a fallback.
     const fallbackReason =
@@ -290,11 +293,15 @@ export const toursApi = {
    * and still answers 200. `routedCount`/`fallbackCount`/`skippedCount` are
    * the honest report the caller must show, never a blanket "success" toast.
    */
-  routeAll: async (tripId: string | undefined, routeId: string): Promise<RouteAllResult> => {
+  routeAll: async (
+    tripId: string | undefined,
+    routeId: string,
+    confirmation?: UseConfirmation
+  ): Promise<RouteAllResult> => {
     const { data } = await api.post<
       Omit<RouteAllResult, "fallbackCount" | "fallbackReason"> &
         Partial<Pick<RouteAllResult, "fallbackCount" | "fallbackReason">>
-    >(`${sectionPath(tripId, routeId)}/route-all`);
+    >(`${sectionPath(tripId, routeId)}/route-all`, confirmation ? { confirmation } : undefined);
     return {
       ...data,
       fallbackCount: data.fallbackCount ?? 0,

@@ -271,7 +271,11 @@ describe("scheduleRoute", () => {
         [stage(a, b, { durationMinutes: null }), stage(b, c, { durationMinutes: 60 })]
       )
     );
-    expect(s.stages[0]).toMatchObject({ departDay: "2027-05-09", arriveDay: "2027-05-09", assumed: true });
+    expect(s.stages[0]).toMatchObject({
+      departDay: "2027-05-09",
+      arriveDay: "2027-05-09",
+      assumed: true,
+    });
     expect(s.stations[1]).toMatchObject({ arriveDay: "2027-05-09", assumed: true });
     // The pinned station is an anchor again, so nothing after it is a guess.
     expect(s.stations[2].assumed).toBeUndefined();

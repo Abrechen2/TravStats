@@ -137,6 +137,49 @@ describe("RouteSection", () => {
     expect(setPlan).not.toHaveBeenCalled();
   });
 
+  describe("the public router (nothing is sent before the account agreed)", () => {
+    const disclosure = {
+      serviceId: "publicRouting",
+      host: "routing.openstreetmap.de",
+      provider: "osrm",
+      location: "cloud",
+      fields: ["points"],
+      pointCount: 2,
+      privacyZonesApplied: null,
+    };
+    const needsConfirmation = () =>
+      Object.assign(new Error("409"), {
+        isAxiosError: true,
+        response: { status: 409, data: { code: "CONFIRMATION_REQUIRED", disclosure } },
+      });
+
+    it("asks first; 'Abbrechen' sends nothing more and raises no error", async () => {
+      const onError = vi.fn();
+      mocks.routeStage.mockRejectedValueOnce(needsConfirmation());
+      render(<RouteSection ctx={ctx(routePlan(), { onError })} />);
+      await userEvent.click(screen.getAllByRole("button", { name: "route.stage.recalculate" })[0]);
+      await userEvent.click(
+        await screen.findByRole("button", { name: "externalServices:useConsent.cancel" })
+      );
+      expect(mocks.routeStage).toHaveBeenCalledTimes(1);
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    it("'Einmal erlauben' repeats the request with the confirmation for that target", async () => {
+      const setPlan = vi.fn();
+      const answer = routePlan({ revision: 9 });
+      mocks.routeStage.mockRejectedValueOnce(needsConfirmation()).mockResolvedValueOnce(answer);
+      render(<RouteSection ctx={ctx(routePlan(), { setPlan })} />);
+      await userEvent.click(screen.getAllByRole("button", { name: "route.stage.recalculate" })[0]);
+      await userEvent.click(await screen.findByTestId("use-consent-once"));
+      await waitFor(() => expect(setPlan).toHaveBeenCalledWith(answer));
+      expect(mocks.routeStage.mock.calls[1][2]).toEqual({
+        mode: "once",
+        target: "osrm@routing.openstreetmap.de",
+      });
+    });
+  });
+
   it("takes the server's answer for a recalculation, including the reason it recorded", async () => {
     const setPlan = vi.fn();
     const answer = routePlan({ revision: 9 });
@@ -144,7 +187,7 @@ describe("RouteSection", () => {
     render(<RouteSection ctx={ctx(routePlan(), { setPlan })} />);
     await userEvent.click(screen.getAllByRole("button", { name: "route.stage.recalculate" })[1]);
     await waitFor(() => expect(setPlan).toHaveBeenCalledWith(answer));
-    expect(mocks.routeStage).toHaveBeenCalledWith(expect.anything(), "g2");
+    expect(mocks.routeStage.mock.calls[0].slice(0, 2)).toEqual([expect.anything(), "g2"]);
   });
 
   it("adds a picked place as a station and joins it to the last one with a stage", async () => {

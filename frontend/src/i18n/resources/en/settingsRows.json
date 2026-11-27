@@ -700,6 +700,10 @@
         "n": "AI help for unclear suggestions",
         "p": "\"Ask the AI\" for stays with several possible places"
       },
+      "publicRouting": {
+        "n": "Public routing",
+        "p": "Routes through the public FOSSGIS server, only with your permission"
+      },
       "mapMatching": {
         "n": "Snap to roads",
         "p": "Lay sparse TravTrack stretches onto the road through your own router"

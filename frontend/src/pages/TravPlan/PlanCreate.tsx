@@ -12,6 +12,7 @@ import {
   type PlanVehicle,
   type PlanView,
 } from "../../lib/api/travplan";
+import { disclosureOf } from "../../lib/api/serviceUse";
 import { newPlanId } from "../../lib/travplanId";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { PlanActions, PlanNotice } from "./planLayout";
@@ -184,8 +185,17 @@ export function PlanCreate({
           await write({ type: "upsert", collection: "stages", value: entryRecord(g) });
         // Distances and drive times straight away, so the plan does not open on "how long?".
         // A router that cannot answer records its reason on the stage; only a failed request throws.
+        // The public router is never used unasked: when it wants a confirmation the stages stay
+        // unmeasured and "neu berechnen" on the route asks then.
         for (const g of built.stages)
-          if (MEASURED.has(g.mode)) plan = await travplanApi.routeStage(plan!, g.id);
+          if (MEASURED.has(g.mode)) {
+            try {
+              plan = await travplanApi.routeStage(plan!, g.id);
+            } catch (cause) {
+              if (disclosureOf(cause)) break;
+              throw cause;
+            }
+          }
       }
       for (const h of held) {
         const amount = parseAmount(h.estimate);

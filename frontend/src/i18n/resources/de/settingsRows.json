@@ -700,6 +700,10 @@
         "n": "KI-Hilfe für unklare Vorschläge",
         "p": "„KI fragen“ bei Aufenthalten mit mehreren möglichen Orten"
       },
+      "publicRouting": {
+        "n": "Öffentliches Routing",
+        "p": "Routen über den öffentlichen FOSSGIS-Server, nur nach deiner Erlaubnis"
+      },
       "mapMatching": {
         "n": "An Straßen anpassen",
         "p": "Dünne TravTrack-Strecken über deinen eigenen Router auf die Straße legen"

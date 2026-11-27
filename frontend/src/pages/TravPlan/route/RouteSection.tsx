@@ -1,6 +1,8 @@
 import { lazy, Suspense, useState } from "react";
 import { Button, Card, EmptyState, Pill, StatTile } from "../../../components/ui";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { UseCancelledError, withUseConsent } from "../../../lib/api/serviceUse";
+import { useServiceUseConfirm } from "../../../components/ExternalServices/useServiceUseConfirm";
 import { probeWebGL2 } from "../../../lib/webgl2";
 import { todayIn } from "../../../shared/time";
 import { newPlanId } from "../../../lib/travplanId";
@@ -49,6 +51,7 @@ const LEGEND: RouteTone[] = ["booked", "placeholder", "spontaneous", "own"];
 
 /** The route plan's canvas (board 7): totals, legend, the timeline of stations and stages, the map. */
 export function RouteSection({ ctx }: { ctx: PlanCtx }) {
+  const confirm = useServiceUseConfirm();
   const { t } = useTranslation("travplan"),
     { plan, state, busy, mutate, setPlan, onError } = ctx,
     [editStation, setEditStation] = useState<string | null>(null),
@@ -83,9 +86,14 @@ export function RouteSection({ ctx }: { ctx: PlanCtx }) {
     try {
       // A router that cannot answer returns the plan with its reason recorded and the stored
       // figures untouched; only a failed request lands in the catch.
-      setPlan(await travplanApi.routeStage(plan, stageId));
+      setPlan(
+        await withUseConsent(
+          (confirmation) => travplanApi.routeStage(plan, stageId, confirmation),
+          confirm.ask
+        )
+      );
     } catch (cause) {
-      onError(cause);
+      if (!(cause instanceof UseCancelledError)) onError(cause);
     } finally {
       setRouting(null);
     }
@@ -128,6 +136,7 @@ export function RouteSection({ ctx }: { ctx: PlanCtx }) {
   );
   return (
     <PlanStack>
+      {confirm.dialog}
       <div className="grid grid-cols-2 lg:grid-cols-4" style={{ gap: "var(--ts-space-lg)" }}>
         {stat(totals.stations, t("route.stats.stations"))}
         {stat(totals.nights, t("route.stats.nights"))}

@@ -362,7 +362,10 @@ describe("nightGap on a route plan", () => {
       ...base,
       endDay: "2027-05-15",
       stations: [a, b, c],
-      stages: [{ ...stage(a.id, b.id), mode: "ferry" as const, durationMinutes: null }, stage(b.id, c.id)],
+      stages: [
+        { ...stage(a.id, b.id), mode: "ferry" as const, durationMinutes: null },
+        stage(b.id, c.id),
+      ],
     };
     // A: 8th. A→B unknown, so 9th–11th are unknown. C (pinned): 12th. 13th–14th: a known gap.
     const gap = checkPlan(state, "2027-05-01").find((f) => f.code === "nightGap");

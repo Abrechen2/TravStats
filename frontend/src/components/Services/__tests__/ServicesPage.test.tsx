@@ -101,13 +101,13 @@ describe("ServicesPage", () => {
     act(() => resetWriteQueue());
   });
 
-  it("draws one card per catalogue entry — 36 — and asks the server's side of nobody but an admin", async () => {
+  it("draws one card per catalogue entry — 37 — and asks the server's side of nobody but an admin", async () => {
     await show(false);
     await waitFor(
-      () => expect(document.querySelectorAll("[data-service-card-id]")).toHaveLength(36),
+      () => expect(document.querySelectorAll("[data-service-card-id]")).toHaveLength(37),
       WAIT
     );
-    expect(SERVICE_CARDS).toHaveLength(36);
+    expect(SERVICE_CARDS).toHaveLength(37);
     expect(api.adminOverview).not.toHaveBeenCalled();
   });
 
@@ -689,7 +689,7 @@ describe("ServicesPage", () => {
       useSettingsLevelStore.setState({ level: "standard" });
       await showSide("server");
       await waitFor(() => expect(ids().length).toBeGreaterThan(0), WAIT);
-      expect(ids()).toHaveLength(26);
+      expect(ids()).toHaveLength(27);
       for (const id of [
         "smtp",
         "push",
@@ -717,7 +717,7 @@ describe("ServicesPage", () => {
       cleanup();
       useSettingsLevelStore.setState({ level: "expert" });
       await showSide("server");
-      await waitFor(() => expect(ids()).toHaveLength(30), WAIT);
+      await waitFor(() => expect(ids()).toHaveLength(31), WAIT);
       // Nothing of the account's half on the server's page.
       expect(document.querySelector("[data-service-side='account']")).toBeNull();
     });

@@ -49,10 +49,19 @@ export function sendConfirmationRequired(res: Response, disclosure: Disclosure):
   });
 }
 
-export type UseConsentServiceId = "aiSuggestionHelp" | "mapMatching";
+/** Thrown where a use needs the account's confirmation first; the route answers 409 with the disclosure. */
+export class ConfirmationRequiredError extends Error {
+  constructor(readonly disclosure: Disclosure) {
+    super("Confirm what is sent to this service first");
+    this.name = "ConfirmationRequiredError";
+  }
+}
+
+export type UseConsentServiceId = "aiSuggestionHelp" | "mapMatching" | "publicRouting";
 export const USE_CONSENT_SERVICES: readonly UseConsentServiceId[] = [
   "aiSuggestionHelp",
   "mapMatching",
+  "publicRouting",
 ];
 
 export type Disclosure = {

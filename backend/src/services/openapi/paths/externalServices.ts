@@ -176,7 +176,9 @@ registry.registerPath({
   path: "/settings/external-services/use-consents/{id}",
   summary: "Revoke a standing permission; the next use asks again",
   tags: accountTags,
-  request: { params: z.object({ id: z.enum(["aiSuggestionHelp", "mapMatching"]) }) },
+  request: {
+    params: z.object({ id: z.enum(["aiSuggestionHelp", "mapMatching", "publicRouting"]) }),
+  },
   responses: {
     204: { description: "Revoked (also when none was stored)" },
     404: { description: "Unknown service", content: errorContent },

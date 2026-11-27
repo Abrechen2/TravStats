@@ -321,7 +321,12 @@ export interface RouteSchedule {
     assumed?: boolean;
   }[];
   /** `assumed`: a drive without a duration, taken to arrive the day it left. */
-  stages: { stageId: string; departDay: string | null; arriveDay: string | null; assumed?: boolean }[];
+  stages: {
+    stageId: string;
+    departDay: string | null;
+    arriveDay: string | null;
+    assumed?: boolean;
+  }[];
   lastDay: string | null;
   /** Drives longer than the vehicle's daily limit, with suggested overnight stops. */
   splits?: DriveSplit[];

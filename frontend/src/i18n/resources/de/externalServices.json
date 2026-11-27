@@ -488,6 +488,17 @@
       "quotaLine": "Nutzungsregeln von OSM",
       "alwaysOnWhy": "Ortssuche, Adresseingabe und Koordinaten laufen darüber; ohne ihn fände kein Formular mehr einen Ort. Wer die öffentlichen Server nicht nutzen will, trägt unter „Experte“ eigene Adressen ein."
     },
+    "publicRouting": {
+      "name": "Öffentlicher Routing-Server (Ersatz)",
+      "purpose": "Routen berechnen, solange kein eigener Routing-Dienst eingerichtet ist",
+      "why": "Letzter Ausweg ohne eingerichteten Routing-Dienst: berechnet Strecken über den öffentlichen OSRM von FOSSGIS (routing.openstreetmap.de). Genutzt wird er nur, wenn das Konto es vorher erlaubt hat.",
+      "cost": "Kostenlos; faire Nutzung, höchstens eine Anfrage pro Sekunde für die ganze Instanz.",
+      "quota": "Höchstens 1 Anfrage pro Sekunde (von TravStats eingehalten).",
+      "dataOut": "Start- und Zielkoordinaten der Strecke. Nichts wird gesendet, bevor das Konto zugestimmt hat.",
+      "getKeyUrl": "https://routing.openstreetmap.de/about.html",
+      "getKeyLabel": "Nutzungsregeln FOSSGIS-Routing",
+      "quotaLine": "faire Nutzung"
+    },
     "selfHostedRouting": {
       "name": "Eigene Routing-Server",
       "purpose": "OSRM und OpenRailRouting selbst gehostet",
@@ -869,7 +880,8 @@
     },
     "services": {
       "aiSuggestionHelp": "KI-Hilfe für unklare Vorschläge",
-      "mapMatching": "An Straßen anpassen"
+      "mapMatching": "An Straßen anpassen",
+      "publicRouting": "Öffentliches Routing"
     },
     "fieldNames": {
       "candidates": "Kandidatennamen",

@@ -76,7 +76,10 @@ export function view(
     findings: checkPlan(state, planToday(state)),
     budget: deriveBudget(state),
     ...(state.shape === "route"
-      ? { schedule: { ...scheduleRoute(state), splits: suggestDriveSplits(state) }, variants: compareVariants(state) }
+      ? {
+          schedule: { ...scheduleRoute(state), splits: suggestDriveSplits(state) },
+          variants: compareVariants(state),
+        }
       : {}),
     ...(lastMutationId ? { lastMutationId } : {}),
   };

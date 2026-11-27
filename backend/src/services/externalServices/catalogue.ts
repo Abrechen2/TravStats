@@ -303,6 +303,19 @@ export const SERVICES: readonly ServiceDef[] = [
     ],
   }),
 
+  // The public FOSSGIS OSRM (routing.openstreetmap.de), the last resort when NO
+  // routing provider is configured. A public router sees the stage endpoints, so
+  // it is never used silently: each account confirms it ("Einmal / Immer
+  // erlauben"), and the switch here is the admin's gate. Public infrastructure,
+  // so on until switched off (owner, 2026-11-27).
+  svc({
+    id: "publicRouting",
+    category: "mapsRoutes",
+    level: "instance",
+    credential: "url",
+    keyless: true,
+  }),
+
   // Map matching of sparse TravTrack road stretches (rc46 extras C2) through a
   // router the admin runs — Valhalla or GraphHopper, usually on the LAN. Off by
   // default and nothing is preconfigured: the stretch's own points leave the

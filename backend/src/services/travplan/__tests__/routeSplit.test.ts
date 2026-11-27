@@ -75,9 +75,9 @@ describe("suggestDriveSplits", () => {
     expect(suggestDriveSplits(plan([g], [a, b], vehicle({})))).toEqual([]);
     // A km limit cannot cut a stage that only knows its duration.
     expect(suggestDriveSplits(plan([g], [a, b], vehicle({ maxDriveKmPerDay: 100 })))).toEqual([]);
-    expect(
-      suggestDriveSplits(plan([g], [a, b], vehicle({ maxDriveMinutesPerDay: 600 })))
-    ).toEqual([]);
+    expect(suggestDriveSplits(plan([g], [a, b], vehicle({ maxDriveMinutesPerDay: 600 })))).toEqual(
+      []
+    );
     const ferry = stage(a, b, { mode: "ferry", durationMinutes: 900 });
     expect(
       suggestDriveSplits(plan([ferry], [a, b], vehicle({ maxDriveMinutesPerDay: 300 })))
@@ -85,9 +85,18 @@ describe("suggestDriveSplits", () => {
   });
 
   it("accepts a stored vehicle without limits and refuses an absurd one", () => {
-    const base = { kind: "car", lengthM: null, consumptionPer100: null, fuelPrice: null, fuelCurrency: null };
+    const base = {
+      kind: "car",
+      lengthM: null,
+      consumptionPer100: null,
+      fuelPrice: null,
+      fuelCurrency: null,
+    };
     expect(vehicleSchema.safeParse(base).success).toBe(true);
-    expect(vehicleSchema.safeParse({ ...base, maxDriveKmPerDay: 400, maxDriveMinutesPerDay: null }).success).toBe(true);
+    expect(
+      vehicleSchema.safeParse({ ...base, maxDriveKmPerDay: 400, maxDriveMinutesPerDay: null })
+        .success
+    ).toBe(true);
     expect(vehicleSchema.safeParse({ ...base, maxDriveMinutesPerDay: -5 }).success).toBe(false);
   });
 });

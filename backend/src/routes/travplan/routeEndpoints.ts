@@ -5,6 +5,11 @@ import { authenticate, requireWriteScope, type AuthRequest } from "../../middlew
 import { rejectDemo } from "../../middleware/demoGuard";
 import { findReceipt, writePlan } from "../../services/travplan/store";
 import { accessiblePlan } from "../../services/travplan/access";
+import { useConfirmationSchema } from "../../schemas/externalServices";
+import {
+  sendConfirmationRequired,
+  ConfirmationRequiredError,
+} from "../../services/externalServices/useConsent";
 import { routeStage } from "../../services/travplan/stageRouting";
 import { bookingSchema } from "../../services/travplan/schema";
 import { matchPlaceholders } from "../../services/travplan/placeholders";
@@ -71,7 +76,11 @@ router.post(
   rejectDemo,
   route(async (req, res) => {
     const body = z
-      .object({ clientRef: uuid, baseRevision: z.number().int().min(1) })
+      .object({
+        clientRef: uuid,
+        baseRevision: z.number().int().min(1),
+        confirmation: useConfirmationSchema.optional(),
+      })
       .strict()
       .parse(req.body);
     const tripId = uuid.parse(req.params.tripId);
@@ -85,10 +94,21 @@ router.post(
     }
     const plan = await accessiblePlan(req.userId!, tripId);
     // Routed outside the write transaction: a provider call must not hold it open.
-    const metrics = await routeStage(req.userId!, parseState(plan.state), stageId);
+    let metrics;
+    try {
+      metrics = await routeStage(req.userId!, parseState(plan.state), stageId, body.confirmation);
+    } catch (error) {
+      if (error instanceof ConfirmationRequiredError) {
+        sendConfirmationRequired(res, error.disclosure);
+        return;
+      }
+      throw error;
+    }
+    const { confirmation: _confirmation, ...writeBody } = body;
+    void _confirmation;
     res.json(
       await writePlan(req.userId!, tripId, {
-        ...body,
+        ...writeBody,
         operation: { type: "stage_metrics", stageId, ...metrics },
       })
     );
