@@ -253,7 +253,7 @@
     "personal": "description",
     "photos": "",
     "documents": "",
-    "excluded": "userId"
+    "excluded": "userId pluginId pluginColumns"
   },
   "PlaceListEntry": {
     "details": "id listId placeId sortIdx createdAt",
@@ -261,7 +261,7 @@
     "personal": "",
     "photos": "",
     "documents": "",
-    "excluded": "createdBy"
+    "excluded": "createdBy externalFields"
   },
   "RailJourney": {
     "details": "id operator trainCategory trainNumber depStationName depStationCode depStationId depLat depLon depCountry depTimezone arrStationName arrStationCode arrStationId arrLat arrLon arrCountry arrTimezone departureTime arrivalTime depPrecision arrPrecision distanceKm distanceSource geometry geometrySource actualDepartureTime actualArrivalTime lookupProvider lookupRef travelClass coach status delayMinutes tightConnection transitMode tripId bookingId externalRef importBatchId createdAt updatedAt",

@@ -174,7 +174,8 @@ describe("plugin location maintenance", () => {
     capabilities = undefined;
     const { cookie, id } = await setup();
     const caps = await request(app).get(`${root}/${id}/capabilities`).set("Cookie", cookie);
-    expect(caps.body).toEqual({ capabilities: [], maintenance: false, error: null });
+    // place-list-table adds a `list` block to the same answer; this test is about maintenance.
+    expect(caps.body).toMatchObject({ capabilities: [], maintenance: false, error: null });
     const list = await request(app).get(`${root}/${id}/maintenance`).set("Cookie", cookie);
     expect(list.status).toBe(409);
     expect(list.body.code).toBe("PLUGIN_NO_MAINTENANCE");

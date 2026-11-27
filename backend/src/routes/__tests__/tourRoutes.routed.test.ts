@@ -1,7 +1,16 @@
-jest.mock("../../services/tour/routing/resolveProvider", () => ({
-  resolveRouteProvider: jest.fn(),
-  describeRoutingAvailability: jest.fn(),
-}));
+jest.mock("../../services/tour/routing/resolveProvider", () => {
+  const resolveRouteProvider = jest.fn();
+  return {
+    resolveRouteProvider,
+    // The routes ask for a choice (configured provider, public router, or a confirmation);
+    // here the mocked provider is the configured one.
+    resolveRouteChoice: jest.fn(async (userId?: string) => {
+      const provider = await resolveRouteProvider(userId);
+      return provider ? { kind: "provider", provider } : { kind: "none" };
+    }),
+    describeRoutingAvailability: jest.fn(),
+  };
+});
 
 import request from "supertest";
 

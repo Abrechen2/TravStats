@@ -322,6 +322,7 @@ export const NON_TRAVEL_RELATIONS = [
   "travTrackExploredCells",
   "travTrackZoneCells",
   "travTrackMonthValues",
+  "travTrackYearSummaries",
   "travTrackDaySources",
   // Smoothing choices and road-matched stretches of the private history (rc46 extras C).
   "travTrackCleanups",
@@ -334,6 +335,8 @@ export const NON_TRAVEL_RELATIONS = [
   "calendarSources",
   "calendarRules",
   "suggestionPlugins",
+  // A copy of a plugin's last maintenance answer: private bookkeeping of a credential.
+  "pluginMaintenanceCaches",
   // The user's own travel purposes (spec 2026-11-22-private-business-purpose.md): private to the
   // owner; a shared entry carries neither the key nor the name.
   "customPurposes",
