@@ -266,6 +266,7 @@ export const TABLE_POLICY: Readonly<Record<string, TablePolicy>> = {
       "bus_journey_id",
       "ferry_journey_id",
       "trip_expense_id",
+      "trip_route_id",
       "rental_category",
     ],
   }),

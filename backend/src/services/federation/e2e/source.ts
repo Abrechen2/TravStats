@@ -182,6 +182,7 @@ export async function collectComparison(userId: string, scope: Scope) {
           "ferryJourneyId",
           "rentalBookingId",
           "tripExpenseId",
+          "tripRouteId",
         ].some((k) => typeof row[k] === "string" && allowedIds.has(row[k] as string));
         const fixedOK =
           !selected ||

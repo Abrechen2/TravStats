@@ -163,6 +163,7 @@ const NO_OWNER: Prisma.DocumentWhereInput = {
   busJourneyId: null,
   ferryJourneyId: null,
   tripExpenseId: null,
+  tripRouteId: null,
 };
 
 function ownerWhere(entry: EntryRef): Prisma.DocumentWhereInput {

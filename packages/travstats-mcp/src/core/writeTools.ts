@@ -249,6 +249,7 @@ const DOC_ENTRY_TYPES = [
   "rentalBooking",
   "busJourney",
   "ferryJourney",
+  "tour",
 ] as const;
 
 const upload_document: ToolDef = {

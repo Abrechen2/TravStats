@@ -428,6 +428,7 @@ export async function listLinkCandidates(
     ["ferryJourney", prisma.ferryJourney],
     ["placeVisit", prisma.placeVisit],
     ["tripExpense", prisma.tripExpense],
+    ["tour", prisma.tripRoute],
   ] as Array<[EntryRef["type"], unknown]> as Array<[EntryRef["type"], Reader]>;
   for (const [type, model] of readers) {
     if (tripIds.length > 0) {

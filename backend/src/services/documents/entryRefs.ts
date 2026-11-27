@@ -229,6 +229,14 @@ export async function describeEntries(
             })
           )
         ),
+    wanted("tour") &&
+      prisma.tripRoute
+        .findMany({ where: where("tour"), select: { id: true, name: true, tripId: true } })
+        .then((rows) =>
+          rows.forEach((r) =>
+            put("tour", r.id, { label: r.name, parentId: null, tripId: r.tripId })
+          )
+        ),
   ]);
   return out;
 }

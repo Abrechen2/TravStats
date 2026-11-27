@@ -120,7 +120,8 @@
       "rentalBooking": "Mietwagen",
       "busJourney": "Busfahrt",
       "ferryJourney": "Fähre",
-      "tripExpense": "Ausgabe"
+      "tripExpense": "Ausgabe",
+      "tour": "Roadtrip / Tour"
     },
     "errors": {
       "failed": "Die Verknüpfung konnte nicht gespeichert werden.",

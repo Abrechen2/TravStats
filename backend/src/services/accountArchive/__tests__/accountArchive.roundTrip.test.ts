@@ -215,6 +215,7 @@ describe("account archive round trip", () => {
       "companions",
       "flight_companions",
       "trip_expenses",
+      "trip_routes",
       "receipt_uploads",
       "documents",
       "document_links",
@@ -295,7 +296,9 @@ describe("account archive round trip", () => {
       return rows;
     };
     const before = await shape(src, U);
-    expect(before.length).toBe(10);
+    expect(before.length).toBe(11);
+    // The roadtrip evidence keeps its target (GitHub #415).
+    expect(before.some((r) => r.target === "trip_route_id")).toBe(true);
     expect(await shape(dst, TARGET_USER)).toEqual(before);
     // Every link's target is a row of the new account.
     const { rows } = await dst.query(
@@ -665,7 +668,7 @@ describe("account archive round trip", () => {
       `SELECT count(*)::int AS n FROM document_links l JOIN documents d ON d.id = l.document_id WHERE d.user_id = $1`,
       [user]
     );
-    expect(links.n).toBe(6);
+    expect(links.n).toBe(7);
     for (const f of listFiles(dstRoot)) {
       expect(fs.readFileSync(path.join(dstRoot, f)).toString()).not.toContain("<script>");
     }

@@ -120,7 +120,8 @@
       "rentalBooking": "Rental",
       "busJourney": "Bus ride",
       "ferryJourney": "Ferry",
-      "tripExpense": "Expense"
+      "tripExpense": "Expense",
+      "tour": "Roadtrip / tour"
     },
     "errors": {
       "failed": "The link could not be saved.",

@@ -32,6 +32,8 @@ export function entryHref(entry: Pick<DocumentEntryInfo, "type" | "id" | "parent
       return `/ferry/${id}`;
     case "tripExpense":
       return `/trips/${parent}`;
+    case "tour":
+      return `/roadtrips/${id}`;
   }
 }
 
