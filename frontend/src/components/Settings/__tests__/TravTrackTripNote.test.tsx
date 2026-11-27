@@ -33,7 +33,7 @@ describe("TravTrackTripNote", () => {
     });
     render(<TravTrackTripNote />);
     expect(await screen.findByTestId("travtrack-trips-no-residence")).toHaveTextContent(
-      /Wohnort bestätigt/
+      /bestätigtem Zuhause/
     );
   });
 
