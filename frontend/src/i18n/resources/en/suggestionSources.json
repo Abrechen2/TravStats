@@ -24,7 +24,10 @@
       "ok_one": "Read: {{count}} appointment between {{from}} and {{to}}.",
       "ok_other": "Read: {{count}} appointments between {{from}} and {{to}}.",
       "skipped_one": "{{count}} recurring appointment was cut short or skipped (too many or invalid repetitions).",
-      "skipped_other": "{{count}} recurring appointments were cut short or skipped (too many or invalid repetitions)."
+      "skipped_other": "{{count}} recurring appointments were cut short or skipped (too many or invalid repetitions).",
+      "skippedEvents_one": "{{count}} appointment could not be read and was skipped.",
+      "skippedEvents_other": "{{count}} appointments could not be read and were skipped.",
+      "failedCollection": "Calendar “{{name}}” skipped: {{reason}}"
     },
     "privacy": {
       "title": "What is stored",

@@ -74,12 +74,19 @@ export default function CalendarSourcesSection(): JSX.Element {
         ...m,
         [source.id]: {
           ok: true,
-          text:
-            t(`${NS}.test.ok`, {
-              count: r.events,
-              from: fmt.date(r.from),
-              to: fmt.date(r.to),
-            }) + (r.skippedRules ? ` ${t(`${NS}.test.skipped`, { count: r.skippedRules })}` : ""),
+          text: [
+            t(`${NS}.test.ok`, { count: r.events, from: fmt.date(r.from), to: fmt.date(r.to) }),
+            r.skippedRules ? t(`${NS}.test.skipped`, { count: r.skippedRules }) : null,
+            r.skippedEvents ? t(`${NS}.test.skippedEvents`, { count: r.skippedEvents }) : null,
+            ...(r.failedCollections ?? []).map((c) =>
+              t(`${NS}.test.failedCollection`, {
+                name: c.name,
+                reason: t(`suggestionSources:${calendarFailureKey(c.code, c.code)}`),
+              })
+            ),
+          ]
+            .filter(Boolean)
+            .join(" "),
         },
       }));
     } catch (e) {

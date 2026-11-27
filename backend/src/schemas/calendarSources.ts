@@ -72,4 +72,8 @@ export const calendarTestResultSchema = z.object({
   to: z.string(),
   /** Recurring events cut short by a cap (their later occurrences are missing). */
   skippedRules: z.number().int(),
+  /** Calendar objects that did not parse and were left out. */
+  skippedEvents: z.number().int(),
+  /** CalDAV collections whose answer could not be read, each with its failure code. */
+  failedCollections: z.array(z.object({ name: z.string(), code: z.string() })),
 });

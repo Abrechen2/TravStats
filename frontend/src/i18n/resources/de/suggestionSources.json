@@ -24,7 +24,10 @@
       "ok_one": "Gelesen: {{count}} Termin zwischen {{from}} und {{to}}.",
       "ok_other": "Gelesen: {{count}} Termine zwischen {{from}} und {{to}}.",
       "skipped_one": "{{count}} Serientermin wurde gekürzt oder übersprungen (zu viele oder ungültige Wiederholungen).",
-      "skipped_other": "{{count}} Serientermine wurden gekürzt oder übersprungen (zu viele oder ungültige Wiederholungen)."
+      "skipped_other": "{{count}} Serientermine wurden gekürzt oder übersprungen (zu viele oder ungültige Wiederholungen).",
+      "skippedEvents_one": "{{count}} Termin konnte nicht gelesen werden und wurde übersprungen.",
+      "skippedEvents_other": "{{count}} Termine konnten nicht gelesen werden und wurden übersprungen.",
+      "failedCollection": "Kalender „{{name}}“ übersprungen: {{reason}}"
     },
     "privacy": {
       "title": "Was gespeichert wird",

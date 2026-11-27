@@ -37,6 +37,10 @@ export interface CalendarTestResult {
   from: string;
   to: string;
   skippedRules: number;
+  /** Calendar objects that did not parse (older servers: absent). */
+  skippedEvents?: number;
+  /** CalDAV collections that could not be read, each with its failure code. */
+  failedCollections?: Array<{ name: string; code: string }>;
 }
 
 export type CalendarSourceInput =

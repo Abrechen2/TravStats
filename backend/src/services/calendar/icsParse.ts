@@ -55,7 +55,23 @@ export interface ParsedWindow {
    * it. Their later occurrences are missing, and the caller says so.
    */
   skippedRules: number;
+  /**
+   * Calendar objects (texts) that did not parse and were left out, by failure code. One broken
+   * event must not take the rest of the calendar with it; the count says it happened.
+   */
+  skippedEvents?: number;
+  skippedReasons?: Record<string, number>;
+  /** CalDAV only: collections whose answer could not be read, with the reason. */
+  failedCollections?: FailedCollection[];
 }
+
+export interface FailedCollection {
+  name: string;
+  code: string;
+}
+
+/** Failures that end the whole read: a budget or deadline, never one broken object. */
+const READ_FATAL_CODES = new Set(["CALENDAR_PARSE_TIMEOUT", "CALENDAR_TOO_MANY_EVENTS"]);
 
 export interface ParseOptions {
   fromMs: number;
@@ -337,13 +353,34 @@ export function parseIcsTexts(texts: readonly string[], options: ParseOptions): 
   };
   const events: CalendarEvent[] = [];
   let skippedRules = 0;
+  let skippedEvents = 0;
+  const skippedReasons: Record<string, number> = {};
+  let firstFailure: unknown = null;
   for (const text of texts) {
-    const one = parseOne(text, options, budget, now);
+    let one: ParsedWindow;
+    try {
+      one = parseOne(text, options, budget, now);
+    } catch (error) {
+      const code = error instanceof CalendarError ? error.code : null;
+      if (code && READ_FATAL_CODES.has(code)) throw error;
+      // One unparseable calendar object is skipped and counted, never the whole read.
+      firstFailure ??= error;
+      skippedEvents++;
+      const reason = code ?? "CALENDAR_PARSE";
+      skippedReasons[reason] = (skippedReasons[reason] ?? 0) + 1;
+      continue;
+    }
     events.push(...one.events);
     skippedRules += one.skippedRules;
   }
+  // Nothing parsed at all: the feed itself is broken, and that is the answer.
+  if (texts.length > 0 && skippedEvents === texts.length) {
+    throw firstFailure instanceof CalendarError
+      ? firstFailure
+      : new CalendarError("protocol", "CALENDAR_PARSE");
+  }
   events.sort((a, b) => a.startMs - b.startMs);
-  return { events, skippedRules };
+  return { events, skippedRules, skippedEvents, skippedReasons };
 }
 
 /** One text: `parseIcsTexts` of a single feed. */

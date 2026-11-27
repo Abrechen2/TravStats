@@ -73,6 +73,22 @@ describe("CalendarSourcesSection", () => {
     ).toBeTruthy();
   });
 
+  it("names a skipped calendar and skipped appointments in a partly read test", async () => {
+    api.test.mockResolvedValue({
+      ok: true,
+      events: 3,
+      from: "2026-11-01T00:00:00.000Z",
+      to: "2026-12-01T00:00:00.000Z",
+      skippedRules: 0,
+      skippedEvents: 2,
+      failedCollections: [{ name: "Work", code: "CALENDAR_PARSE" }],
+    });
+    render(<CalendarSourcesSection />);
+    await userEvent.click(await screen.findByText("suggestionSources:calendar.test.button"));
+    const line = await screen.findByText(/calendar\.test\.failedCollection/);
+    expect(line.textContent).toContain("calendar.test.skippedEvents");
+  });
+
   it("falls back to the fixed kind for a code it does not name", async () => {
     api.test.mockRejectedValue(rejectWith("auth", "SOMETHING_NEW"));
     render(<CalendarSourcesSection />);
