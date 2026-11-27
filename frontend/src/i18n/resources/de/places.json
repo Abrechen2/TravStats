@@ -187,6 +187,8 @@
     "saveFailed": "Die Änderung konnte nicht gespeichert werden.",
     "deleteFailed": "Die Liste konnte nicht gelöscht werden.",
     "addFailed": "Der Ort konnte nicht hinzugefügt werden.",
+    "removedToast": "„{{name}}“ aus der Liste entfernt",
+    "undoRemove": "Rückgängig",
     "removeFailed": "Der Ort konnte nicht entfernt werden.",
     "subscribeFailed": "Der Checkliste konnte nicht gefolgt werden.",
     "moveUp": "„{{name}}“ nach oben schieben",

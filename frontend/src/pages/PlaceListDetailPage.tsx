@@ -33,7 +33,7 @@ import PlaceListTable from "../components/places/listTable/PlaceListTable";
 import { isAutomatic } from "../lib/api/smartLists";
 import OverflowMenu from "../components/ui/OverflowMenu";
 import { PlaceListAddPanel, type UnassignedPlace } from "../components/places/PlaceListAddPanel";
-import { useToastStore } from "../store/toastStore";
+import { toast, useToastStore } from "../store/toastStore";
 import type { Place } from "../types/place";
 import type { PlaceList } from "../types/placeList";
 import InlineError from "../components/ui/InlineError";
@@ -241,9 +241,26 @@ export default function PlaceListDetailPage(): JSX.Element {
   const handleRemove = useCallback(
     async (placeId: string): Promise<void> => {
       if (!list) return;
-      await runChange(() => removePlaceFromList(list.id, placeId), "places:lists.removeFailed");
+      const before = entries.map((e) => e.placeId);
+      const name = entries.find((e) => e.placeId === placeId)?.place.name ?? "";
+      const done = await runChange(
+        () => removePlaceFromList(list.id, placeId),
+        "places:lists.removeFailed"
+      );
+      if (!done) return;
+      // No confirm for a one-place removal: it is taken back instead, in its old position.
+      toast.undoable({
+        label: t("places:lists.removedToast", { name }),
+        undoLabel: t("places:lists.undoRemove"),
+        onUndo: () => {
+          void runChange(async () => {
+            await addPlaceToList(list.id, placeId);
+            return reorderPlaceList(list.id, before);
+          }, "places:lists.addFailed");
+        },
+      });
     },
-    [list, runChange]
+    [list, entries, runChange, t]
   );
 
   const handleRename = useCallback(async (): Promise<void> => {

@@ -187,6 +187,8 @@
     "saveFailed": "The change could not be saved.",
     "deleteFailed": "The list could not be deleted.",
     "addFailed": "The place could not be added.",
+    "removedToast": "“{{name}}” removed from the list",
+    "undoRemove": "Undo",
     "removeFailed": "The place could not be removed.",
     "subscribeFailed": "Could not follow that checklist.",
     "moveUp": "Move “{{name}}” up",
