@@ -6,6 +6,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+**Upgrading to 2.8.0-rc.49.** One new migration, additive: a carried port records the server it came from. Nothing is deleted.
+
+### Security
+
+- **A server you share with can no longer write into your port catalogue** by merely sending an offer: ports it carries are created only when you accept or link the entry, at most 40 per message, with their origin recorded. Previews and declined offers write nothing.
+- **Undoing a link's additions removes only the entries that link created, and only in your own trip,** never in another member's trip.
+
+### Fixed
+
+- **Entries only one side holds are never added silently.** The link preview lists them as "nur bei …", unticked by default, with likely duplicates flagged; a bulk link never adds them and lists such trips under "Ergänzungen bestätigen".
+- **A cruise whose ports exist only on one server** keeps its line on the other side after linking.
+- **The same hotel no longer counts as a conflict** when only one side has its chain, a companion linked across servers appears once, cruise stops without a UN/LOCODE and stops of every kind survive a `.travstats` round trip, and flights without a departure zone pair.
+- **Bulk linking keeps trips without a copy apart** under "Neue Reisen (keine Kopie bei dir)" instead of counting them as decisions.
+- Field choices default to "genauer", checkboxes are larger on touch, person menus name the server, the link banner says "hat eure Reise verknüpft", and deleting an account also removes its empty share groups.
+
 **Upgrading to 2.8.0-rc.48.** Two new migrations, both additive: documents can be linked to a roadtrip, and trip link proposals between two accounts on one server get a table of their own. Nothing is deleted. Optional for LXC hosts: bind `/proc/meminfo:/host/proc/meminfo:ro` so the container sizes Node's memory from the real limit; `NODE_MAX_OLD_SPACE_MB` still wins.
 
 ### Security
