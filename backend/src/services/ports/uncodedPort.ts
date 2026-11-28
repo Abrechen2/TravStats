@@ -30,6 +30,7 @@ export interface UncodedPortRef {
 }
 
 type PortFinder = { port: Pick<DbTransaction["port"], "findMany"> };
+type PortWriter = { port: Pick<DbTransaction["port"], "findMany" | "create"> };
 
 /** The catalogue's code-less ports carrying any of these names (user-added ports never match). */
 export async function loadUncodedPorts(
@@ -56,4 +57,49 @@ export function uncodedPort(rows: readonly UncodedPortRow[], ref: UncodedPortRef
   );
   // Two candidates are a guess between them: left unresolved, the name is kept.
   return hits.length === 1 ? hits[0].id : null;
+}
+
+const near = (r: UncodedPortRow, ref: UncodedPortRef) =>
+  haversineKm({ lat: r.lat, lon: r.lon }, { lat: ref.lat, lon: ref.lon }) <= PORT_POSITION_MATCH_KM;
+
+/**
+ * The ports a received cruise names without a UN/LOCODE, made available here: a catalogue port of
+ * that name, country and place first; else one a user (or an earlier share) added there; else a new
+ * user-added port with the sender's name, country and position. Sharing UAT 2: the owner's Yangtze
+ * ports are his own additions, so the receiver knew none of them and dropped every leg and the drawn
+ * line silently. Two candidates of one name at one place are not guessed between, and nothing new
+ * is made beside them.
+ */
+export async function ensureUncodedPorts(
+  client: PortWriter,
+  refs: readonly UncodedPortRef[]
+): Promise<UncodedPortRow[]> {
+  const names = [...new Set(refs.map((r) => r.name).filter((n) => n.trim() !== ""))];
+  if (names.length === 0) return [];
+  const rows = await client.port.findMany({
+    where: { name: { in: names }, unlocode: null },
+    select: { id: true, name: true, country: true, lat: true, lon: true, isUserAdded: true },
+    orderBy: { id: "asc" },
+  });
+  const catalogue = rows.filter((r) => !r.isUserAdded);
+  const added = rows.filter((r) => r.isUserAdded);
+  const out: UncodedPortRow[] = [...catalogue];
+  for (const ref of refs) {
+    if (ref.name.trim() === "" || !Number.isFinite(ref.lat) || !Number.isFinite(ref.lon)) continue;
+    const sameName = (r: UncodedPortRow) => r.name === ref.name && near(r, ref);
+    if (catalogue.some(sameName)) continue;
+    const own = added.filter((r) => sameName(r) && r.country === ref.country);
+    if (own.length === 1) {
+      if (!out.includes(own[0])) out.push(own[0]);
+      continue;
+    }
+    if (own.length > 1 || added.some(sameName)) continue;
+    const created = await client.port.create({
+      data: { name: ref.name, country: ref.country, lat: ref.lat, lon: ref.lon, isUserAdded: true },
+      select: { id: true, name: true, country: true, lat: true, lon: true, isUserAdded: true },
+    });
+    added.push(created);
+    out.push(created);
+  }
+  return out;
 }

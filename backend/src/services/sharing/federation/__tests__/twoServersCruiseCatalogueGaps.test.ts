@@ -53,20 +53,25 @@ function longLine(count: number): number[][] {
   });
 }
 
-async function sharedCruise(opts: { withCodes: boolean; line: number[][]; twinOnB?: boolean }) {
+async function sharedCruise(opts: {
+  withCodes: boolean;
+  line: number[][];
+  twinOnB?: boolean;
+  missingOnB?: boolean;
+}) {
   const anna = await user(a, "Anna");
   const ben = await user(b, "Ben");
   const remote = await pairAcross(a, anna, b, ben);
   const tag = randomUUID().slice(0, 4).toUpperCase();
   const pa = await ports(a, tag, opts.withCodes);
-  const pb = await ports(b, tag, opts.withCodes);
+  const pb = opts.missingOnB ? null : await ports(b, tag, opts.withCodes);
   if (opts.twinOnB) {
     const twin = await b.prisma.port.create({
       data: {
-        name: pb.from.name,
+        name: pb!.from.name,
         unlocode: null,
-        lat: pb.from.lat,
-        lon: pb.from.lon,
+        lat: pb!.from.lat,
+        lon: pb!.from.lon,
         country: "Egypt",
       },
     });
@@ -119,7 +124,7 @@ async function sharedCruise(opts: { withCodes: boolean; line: number[][]; twinOn
     include: { stops: { orderBy: { position: "asc" } }, legs: true },
   });
   const lines = await b.prisma.cruiseLegRoute.findMany({ where: { cruiseId: benCruise.id } });
-  return { pb, benCruise, lines };
+  return { pa, pb: pb!, benCruise, lines };
 }
 
 it("a hand-drawn line of more than 64 points no longer breaks the share: it arrives thinned, ends kept", async () => {
@@ -155,4 +160,27 @@ it("two catalogue ports of one name at one place on the receiver are not guessed
     [null, t.pb.from.name],
     [t.pb.to.id, null],
   ]);
+});
+
+/**
+ * Sharing UAT 2: the owner's Yangtze ports (Fengdu, Wushan, …) are his own additions, unknown to
+ * his father's catalogue. Every leg and the drawn line of more than 64 points were dropped without
+ * a word. The receiver now adds such ports as user ports and keeps the cruise's shape.
+ */
+it("ports the receiver lacks entirely arrive as user ports, with the legs and the line", async () => {
+  const line = longLine(5);
+  const t = await sharedCruise({ withCodes: false, line, missingOnB: true });
+  const ids = t.benCruise.stops.map((s) => s.portId);
+  expect(ids.every((id) => id !== null)).toBe(true);
+  expect(t.benCruise.stops.map((s) => s.unresolvedPortName)).toEqual([null, null]);
+  const added = await b.prisma.port.findMany({ where: { id: { in: ids as number[] } } });
+  made.set(b, [...(made.get(b) ?? []), ...added.map((p) => p.id)]);
+  expect(added.map((p) => [p.name, p.isUserAdded, p.country]).sort()).toEqual(
+    [
+      [t.pa.from.name, true, "Egypt"],
+      [t.pa.to.name, true, "Egypt"],
+    ].sort()
+  );
+  expect(t.benCruise.legs.map((l) => [l.fromPortId, l.toPortId])).toEqual([[ids[0], ids[1]]]);
+  expect(t.lines.map((l) => l.waypoints)).toEqual([line]);
 });

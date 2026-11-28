@@ -16,7 +16,7 @@
  *   `DERIVE[entity]` (run by `copyInto`) decides it on this server's clock.
  */
 import type { DbTransaction } from "../../../../db";
-import { uncodedPort } from "../../../ports/uncodedPort";
+import { ensureUncodedPorts, uncodedPort } from "../../../ports/uncodedPort";
 import type { SharedRow } from "../../adapters";
 import type { EntryRef } from "../../adapters/stop";
 import { SHARE_TYPES, type ShareEntity } from "../../shareTypes";
@@ -77,7 +77,6 @@ async function resolver(c: DbTransaction, entries: readonly WireEntry[]): Promis
   const stations = f.flatMap((x) => [x.depStation, x.arrStation]) as (StationRef | null)[];
   const airports = f.flatMap((x) => [x.pickupAirport, x.returnAirport]) as (AirportRef | null)[];
   const unlocodes = keysOf(portRefs.map((p) => p?.unlocode));
-  const uncodedNames = keysOf(portRefs.map((p) => (p && !p.unlocode ? p.name : null)));
   const imos = keysOf(f.map((x) => (x.ship as ShipRef | null)?.imo));
   const sourceIds = keysOf(stations.map((s) => s?.sourceId));
   const uics = keysOf(stations.map((s) => s?.uic));
@@ -89,11 +88,11 @@ async function resolver(c: DbTransaction, entries: readonly WireEntry[]): Promis
       where: { unlocode: { in: unlocodes } },
       select: { id: true, unlocode: true },
     }),
-    c.port.findMany({
-      where: { name: { in: uncodedNames }, unlocode: null, isUserAdded: false },
-      select: { id: true, name: true, country: true, lat: true, lon: true },
-      orderBy: { id: "asc" },
-    }),
+    // Ports the sender named without a code and this catalogue lacks are added (sharing UAT 2).
+    ensureUncodedPorts(
+      c,
+      portRefs.filter((p): p is PortRef => !!p && !p.unlocode)
+    ),
     c.ship.findMany({ where: { imo: { in: imos } }, select: { id: true, imo: true } }),
     c.railStation.findMany({
       where: { sourceId: { in: sourceIds } },
