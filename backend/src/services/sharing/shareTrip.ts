@@ -1,5 +1,6 @@
 import { prisma } from "../../db";
 import type { DbTransaction } from "../../db";
+import { linkAdditionsOf, undoAdditions } from "./linkAdditions";
 import { AppError } from "../../middleware/errorHandler";
 import type { Prisma } from "../../prisma";
 import { consentRequired } from "./consent";
@@ -260,6 +261,8 @@ export async function leaveGroup(userId: string, tripId: string): Promise<{ left
     if (!trip.shareGroupId) {
       throw new AppError("This trip is not shared", 409, "SHARE_TRIP_NOT_SHARED");
     }
+    // Undo of a link also takes back the one-sided entries it added (owner, 2026-11-28).
+    await undoAdditions(tx, userId, trip.shareGroupId, await linkAdditionsOf(tx, userId, trip));
     await detachTrip(tx, userId, trip);
     return { left: true as const };
   });

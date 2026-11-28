@@ -37,10 +37,11 @@ import { answerTo, openOffer, storedOfferSchema, type OpenOffer } from "./offerI
 import { refusedThere } from "./offers";
 import { LOCAL_ERROR, kindOf, requireAdmitted, unreachable } from "./peerCheck";
 import { peerSupports } from "./peerFeatures";
-import type { LinkedState } from "./linkState";
+import { linkedStateSchema, type LinkedState } from "./linkState";
+import { addOneSided, tickedRows, type AddedEntry } from "../linkAdditions";
 import { acceptOfferedRoster } from "./roster";
 import { OFFER_PREVIEW_TRANSPORT, messageHeader, wireBytes } from "./transport";
-import { fromWireEntries } from "./wire/decode";
+import { ensureWirePorts, fromWireEntries, unknownCarriedPorts } from "./wire/decode";
 import type { WireEntry } from "./wire/shapes";
 
 /**
@@ -218,9 +219,15 @@ export async function previewOfferLink(
   const wire = await fetchOffered(userId, row);
   return prisma.$transaction(async (tx) => {
     const { trip, here, there, plan } = await planOffer(tx, userId, tripId, wire);
+    // Read only: ports linking would add are named, not made (sharing UAT 2, security review).
+    const newPorts = await unknownCarriedPorts(
+      tx,
+      wire.map((e) => e.facts)
+    );
     return {
       access: "full" as const,
       ...describePlan(plan, tripView(trip), offeredTrip(row), here, there),
+      ...(newPorts.length > 0 ? { newPorts } : {}),
     };
   });
 }
@@ -233,6 +240,8 @@ interface Keyed {
   alreadyLinked: number;
   onlyHere: number;
   onlyThere: number;
+  /** The caller's own one-sided entries they ticked: spread to the home once it answered. */
+  ownTicked?: LinkRow[];
 }
 
 /** Give each matched entry here the home's key; false for a key this account holds elsewhere. */
@@ -249,7 +258,8 @@ async function linkStructure(
   userId: string,
   row: OpenOffer,
   tripId: string,
-  wire: WireEntry[]
+  wire: WireEntry[],
+  add: readonly string[] | undefined
 ): Promise<Keyed> {
   return prisma.$transaction(async (tx) => {
     // Held and read again, as an accept holds it: a second link or accept finds the offer taken.
@@ -261,6 +271,12 @@ async function linkStructure(
       throw remoteShareError("SHARE_REMOTE_OFFER_NOT_FOUND", 404, "No such open offer", {
         userId,
       });
+    // The person links: the code-less ports the offer names and this catalogue lacks are added.
+    await ensureWirePorts(
+      tx,
+      wire.map((e) => e.facts),
+      row.remote.origin
+    );
     const { trip, plan } = await planOffer(tx, userId, tripId, wire);
     const out: Keyed = {
       pairs: [],
@@ -286,14 +302,34 @@ async function linkStructure(
       storedOfferSchema.parse(row.offer).roster.map((r) => r.ref)
     );
     await tx.trip.update({ where: { id: trip.id }, data: { shareGroupId: row.groupId } });
-    const skip = plan.onlyThere.flatMap((r) => (r.row.shareKey ? [r.row.shareKey] : []));
+    // Ticked entries only the home holds are NOT skipped: the home's entries then create them here
+    // with its keys. Everything else only the home holds stays out (owner, 2026-11-28).
+    const ticked = tickedRows(plan, add, userId, null);
+    const takeKeys = new Set(
+      ticked
+        .filter((t) => t.owner === null)
+        .flatMap((t) => (t.row.row.shareKey ? [t.row.row.shareKey] : []))
+    );
+    const skip = plan.onlyThere.flatMap((r) =>
+      r.row.shareKey && !takeKeys.has(r.row.shareKey) ? [r.row.shareKey] : []
+    );
+    const added: AddedEntry[] = ticked
+      .filter((t) => t.owner === null && t.row.row.shareKey)
+      .map((t) => ({
+        entity: t.row.entity,
+        key: t.row.row.shareKey as string,
+        ownerId: `remote:${row.remoteId}`,
+      }));
+    out.ownTicked = ticked.filter((t) => t.owner === userId).map((t) => t.row);
     await tx.tripShareRemoteMember.update({
       where: { id: row.id },
       data: {
         state: "active",
         stateReason: null,
         stateSince: new Date(),
-        offer: { linked: { tripId: trip.id, skip } } satisfies LinkedState as Prisma.InputJsonValue,
+        offer: {
+          linked: { tripId: trip.id, skip, ...(added.length > 0 ? { added } : {}) },
+        } satisfies LinkedState as Prisma.InputJsonValue,
       },
     });
     await tx.shareNotice.create({
@@ -371,13 +407,47 @@ async function settleAfterAnswer(
   );
 }
 
+/**
+ * After the answer: the caller's own ticked one-sided entries get a key and go to the home as new
+ * entries, and the membership remembers them for the undo (owner, 2026-11-28).
+ */
+async function addOwnTicked(userId: string, row: OpenOffer, rows: LinkRow[]): Promise<number> {
+  if (rows.length === 0) return 0;
+  return prisma.$transaction(
+    async (tx) => {
+      const added: AddedEntry[] = [];
+      for (const r of rows) added.push(await addOneSided(tx, userId, row.groupId, r));
+      const member = await tx.tripShareRemoteMember.findUnique({
+        where: { id: row.id },
+        select: { offer: true },
+      });
+      const state = linkedStateSchema.safeParse(member?.offer);
+      if (state.success)
+        await tx.tripShareRemoteMember.update({
+          where: { id: row.id },
+          data: {
+            offer: {
+              linked: {
+                ...state.data.linked,
+                added: [...(state.data.linked.added ?? []), ...added],
+              },
+            } as Prisma.InputJsonValue,
+          },
+        });
+      return added.length;
+    },
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
+}
+
 /** Link the offered trip with the caller's own trip; see the file comment. */
 export async function linkOffer(
   userId: string,
   id: string,
   tripId: string,
   decision: LinkDecision,
-  choices?: LinkChoices
+  choices?: LinkChoices,
+  add?: readonly string[]
 ): Promise<LinkResult> {
   await requireTripFederation(userId);
   const row = await openOffer(userId, id);
@@ -397,7 +467,7 @@ export async function linkOffer(
       { origin: row.remote.origin }
     );
   const wire = await fetchOffered(userId, row);
-  const keyed = await linkStructure(userId, row, tripId, wire);
+  const keyed = await linkStructure(userId, row, tripId, wire, add);
   try {
     await answerTo(row, "accept");
   } catch (error) {
@@ -417,8 +487,19 @@ export async function linkOffer(
       "Linked an offer, but settling the differing facts failed"
     );
   }
+  let added = 0;
+  try {
+    added = await addOwnTicked(userId, row, keyed.ownTicked ?? []);
+  } catch (error) {
+    settleFailed = true;
+    logger.error(
+      { operation: "share_link_add_failed", userId, origin: row.remote.origin, error },
+      "Linked an offer, but adding the ticked entries failed"
+    );
+  }
   return {
     settleFailed,
+    added,
     groupId: row.groupId,
     linked: keyed.pairs.length,
     alreadyLinked: keyed.alreadyLinked,

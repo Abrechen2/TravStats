@@ -204,3 +204,38 @@ it("a settle that fails after the other server accepted keeps the link and says 
     (await b.prisma.trip.findUniqueOrThrow({ where: { id: bensTrip.id } })).shareGroupId
   ).not.toBeNull();
 });
+
+/**
+ * Owner decision 2026-11-28 (sharing UAT 2): one-sided entries are added only when ticked. Here
+ * Anna's rail ride (only on A) and Ben's "Pensão Amor" (only on B) are ticked; each arrives on the
+ * other server with the link's key, and Ben's leaving removes the ride the link added on B.
+ */
+it("adds the ticked one-sided entries both ways, and the undo removes the added copy here", async () => {
+  const { anna, ben, bensTrip, offer } = await setup();
+  const preview = await b.offerLink.previewOfferLink(ben, offer.id, bensTrip.id);
+  if (preview.access !== "full") throw new Error("expected the full dry run");
+  const ride = preview.onlyThere.find((o) => o.entity === "rail");
+  const pension = preview.onlyHere.find((o) => o.label.includes("Pensão"));
+  expect(ride?.duplicateOf).toBeNull();
+  const result = await b.offerLink.linkOffer(ben, offer.id, bensTrip.id, "best", undefined, [
+    ride!.ref,
+    pension!.ref,
+  ]);
+  expect(result.added).toBe(1); // Ben's own one, spread to A; A's arrives with A's entries.
+  for (let i = 0; i < 3; i++) {
+    await a.outbox.runDeliveries();
+    await b.outbox.runDeliveries();
+  }
+  const bensRide = await b.prisma.railJourney.findFirst({ where: { userId: ben } });
+  const annasRide = await a.prisma.railJourney.findFirstOrThrow({ where: { userId: anna } });
+  expect(bensRide?.shareKey).toBe(annasRide.shareKey);
+  const annasStays = await a.prisma.lodgingStay.findMany({
+    where: { userId: anna },
+    include: { lodging: true },
+  });
+  expect(annasStays.map((s) => s.lodging.name).sort()).toEqual(["Hotel Avenida", "Pensão Amor"]);
+
+  await b.shareTrip.leaveGroup(ben, bensTrip.id);
+  expect(await b.prisma.railJourney.count({ where: { userId: ben } })).toBe(0);
+  expect(await b.prisma.lodgingStay.count({ where: { userId: ben } })).toBe(2);
+});

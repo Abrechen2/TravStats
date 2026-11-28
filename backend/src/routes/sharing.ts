@@ -343,7 +343,7 @@ router.post(
     const body = proposalLinkBodySchema.parse(req.body ?? {});
     res.json({
       success: true,
-      data: await linkProposal(req.userId!, id, body.tripId, body.decision, body.choices),
+      data: await linkProposal(req.userId!, id, body.tripId, body.decision, body.choices, body.add),
     });
   })
 );

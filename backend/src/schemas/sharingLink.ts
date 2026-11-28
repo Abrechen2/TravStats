@@ -9,6 +9,8 @@ import { z } from "./zod";
 const id = z.string().min(1).max(100);
 /** `best`: the bulk link's — the better value wins each difference, a tie keeps both. */
 const decision = z.enum(["mine", "theirs", "both", "best"]);
+/** One-sided entries the person ticked (refs from the dry run), added to the other copy. */
+const add = z.array(z.string().max(120)).max(500).optional();
 const fieldChoice = z.enum(["mine", "theirs", "both"]);
 
 /** Per pair (`<entity>:<entry id>` from the dry run), per group: the person's own choice. */
@@ -26,16 +28,21 @@ const choices = z
 export const linkCandidatesQuerySchema = z.object({ userId: id }).strict();
 export const linkPreviewBodySchema = z.object({ userId: id, targetTripId: id }).strict();
 export const linkBodySchema = z
-  .object({ userId: id, targetTripId: id, decision, choices })
+  .object({ userId: id, targetTripId: id, decision, choices, add })
   .strict();
 
 export const offerLinkPreviewBodySchema = z.object({ tripId: id }).strict();
-export const offerLinkBodySchema = z.object({ tripId: id, decision, choices }).strict();
+export const offerLinkBodySchema = z.object({ tripId: id, decision, choices, add }).strict();
 
 const day = z.string().nullable();
 const tripView = z.strictObject({ id: z.string(), name: z.string(), startDay: day, endDay: day });
 const entity = z.enum(SHARE_ENTITIES);
 const entry = z.strictObject({ entity, label: z.string(), when: z.string().nullable() });
+/** An entry only one side holds: added to the other copy only when named in `add`. */
+const oneSided = entry.extend({
+  ref: z.string(),
+  duplicateOf: z.strictObject({ label: z.string(), when: z.string().nullable() }).nullable(),
+});
 
 /** Before the other account agreed to sharing: this and nothing else (no derived field). */
 const awaitingConsent = z.strictObject({ access: z.literal("awaitingConsent") });
@@ -112,8 +119,9 @@ const linkPreviewFull = z.strictObject({
       automatic: z.boolean(),
     })
   ),
-  onlyHere: z.array(entry),
-  onlyThere: z.array(entry),
+  onlyHere: z.array(oneSided),
+  onlyThere: z.array(oneSided),
+  newPorts: z.array(z.string()).optional(),
 });
 
 export const linkPreviewSchema = z.union([linkPreviewFull, awaitingConsent]);
@@ -127,6 +135,7 @@ export const linkResultSchema = z.strictObject({
   onlyHere: z.number().int(),
   onlyThere: z.number().int(),
   settleFailed: z.boolean(),
+  added: z.number().int().optional(),
 });
 
 /** The bulk link (UAT 2026-11-27): the pairs, and the trips to offer across servers. */
@@ -157,7 +166,7 @@ export const bulkOfferCandidatesSchema = z.array(tripView.extend({ offered: z.bo
 export const proposeBodySchema = z.object({ userId: id }).strict();
 export const proposalIdSchema = z.string().uuid();
 export const proposalPreviewBodySchema = z.object({ tripId: id }).strict();
-export const proposalLinkBodySchema = z.object({ tripId: id, decision, choices }).strict();
+export const proposalLinkBodySchema = z.object({ tripId: id, decision, choices, add }).strict();
 export const proposableQuerySchema = z.object({ userId: id }).strict();
 
 const proposalStatus = z.enum(["pending", "linked", "declined"]);

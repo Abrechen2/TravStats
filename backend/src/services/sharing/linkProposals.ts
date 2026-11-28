@@ -185,7 +185,8 @@ export async function linkProposal(
   id: string,
   tripId: string,
   decision: LinkDecision,
-  choices?: LinkChoices
+  choices?: LinkChoices,
+  add?: readonly string[]
 ): Promise<LinkResult> {
   const p = await proposalTo(userId, id);
   return prisma.$transaction(
@@ -195,7 +196,16 @@ export async function linkProposal(
       const still = await tx.tripLinkProposal.findFirst({ where: { id: p.id, status: "pending" } });
       if (!still) throw notFound();
       const trip = await ownTripForLink(tx, userId, tripId);
-      const result = await linkInTx(tx, trip, userId, p.proposerId, p.tripId, decision, choices);
+      const result = await linkInTx(
+        tx,
+        trip,
+        userId,
+        p.proposerId,
+        p.tripId,
+        decision,
+        choices,
+        add
+      );
       await tx.tripLinkProposal.update({
         where: { id: p.id },
         data: { status: "linked", linkedTripId: trip.id, decidedAt: new Date() },

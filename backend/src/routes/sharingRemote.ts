@@ -379,10 +379,10 @@ router.post(
   remoteShareLinkLimiter,
   handle(async (req, res) => {
     const id = remoteOfferIdSchema.parse(req.params.id);
-    const { tripId, decision, choices } = offerLinkBodySchema.parse(req.body ?? {});
+    const { tripId, decision, choices, add } = offerLinkBodySchema.parse(req.body ?? {});
     res.json({
       success: true,
-      data: await linkOffer(req.userId!, id, tripId, decision, choices),
+      data: await linkOffer(req.userId!, id, tripId, decision, choices, add),
     });
   })
 );

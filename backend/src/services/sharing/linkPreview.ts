@@ -1,5 +1,6 @@
 import type { DbTransaction } from "../../db";
 import { ADAPTERS } from "./adapters";
+import { likelyDuplicate, oneSidedRef, type DuplicateHint } from "./linkDuplicates";
 import { shareableIdsOnTrip } from "./keyOps";
 import type { FactRecord } from "./factValues";
 import { labelOf, whenOf, type LinkPair, type LinkPlan, type LinkRow } from "./linkMatch";
@@ -39,6 +40,16 @@ export interface LinkEntryView {
   entity: ShareEntity;
   label: string;
   when: string | null;
+}
+
+/**
+ * An entry only one side holds (owner decision, 2026-11-28): never added silently. The link adds
+ * it to the other copy only when its `ref` is in `add`; a likely duplicate on the other side is
+ * named, and the web lets it be ticked only after it was looked at.
+ */
+export interface LinkOneSidedView extends LinkEntryView {
+  ref: string;
+  duplicateOf: DuplicateHint | null;
 }
 
 /** A differing value as the dry run shows it: a display value, or a line by its quality. */
@@ -93,8 +104,10 @@ export interface LinkPreview {
   automatic: boolean;
   byType: LinkTypeCount[];
   matched: LinkMatchView[];
-  onlyHere: LinkEntryView[];
-  onlyThere: LinkEntryView[];
+  onlyHere: LinkOneSidedView[];
+  onlyThere: LinkOneSidedView[];
+  /** Code-less ports the other server names and this catalogue lacks: added on linking. */
+  newPorts?: string[];
 }
 
 const VALUE_CHARS = 80;
@@ -237,10 +250,16 @@ export function describePlan(
       };
     }).filter((t) => t.here > 0 || t.there > 0),
     matched,
-    onlyHere: plan.onlyHere.map(entryView),
-    onlyThere: plan.onlyThere.map(entryView),
+    onlyHere: plan.onlyHere.map((r) => oneSidedView(r, thereRows)),
+    onlyThere: plan.onlyThere.map((r) => oneSidedView(r, hereRows)),
   };
 }
+
+const oneSidedView = (r: LinkRow, otherSide: readonly LinkRow[]): LinkOneSidedView => ({
+  ...entryView(r),
+  ref: oneSidedRef(r),
+  duplicateOf: likelyDuplicate(r, otherSide),
+});
 
 /** Every shareable entry of one trip, keyed or not, as the matcher reads it. */
 export async function tripRows(

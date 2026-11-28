@@ -18,6 +18,7 @@ import {
   type LinkCandidate,
   type LinkPreview,
 } from "./linkPreview";
+import { addOneSided, tickedRows, type AddedEntry } from "./linkAdditions";
 import { settlePair, type LinkChoices } from "./linkSettle";
 import { missingGroupConsent } from "./members";
 import { SHARE_TYPES, emptyCounts } from "./shareTypes";
@@ -55,6 +56,8 @@ export interface LinkResult {
   settled: number;
   onlyHere: number;
   onlyThere: number;
+  /** One-sided entries the person ticked and the link added to the other copy. */
+  added?: number;
   /**
    * Across servers only: the link stands (the other server has the answer) but settling the
    * differing facts failed — the person is told and may settle them by hand.
@@ -263,7 +266,8 @@ export async function linkInTx(
   otherId: string,
   targetTripId: string,
   decision: LinkDecision,
-  choices?: LinkChoices
+  choices?: LinkChoices,
+  add?: readonly string[]
 ): Promise<LinkResult> {
   const { target, plan } = await planFor(tx, trip, userId, otherId, targetTripId);
   const joining = target.shareGroupId === null;
@@ -280,6 +284,10 @@ export async function linkInTx(
   }
   if (joining) await tx.trip.update({ where: { id: target.id }, data: { shareGroupId: groupId } });
   const result = await applyPlan(tx, userId, otherId, groupId, plan, decision, choices);
+  // Only what the person ticked is added, each with the link's key (owner, 2026-11-28).
+  const added: AddedEntry[] = [];
+  for (const t of tickedRows(plan, add, userId, otherId))
+    added.push(await addOneSided(tx, t.owner as string, groupId, t.row));
   await restatusTrips([trip.id, target.id], tx);
   if (joining) {
     await queueRoster(tx, groupId);
@@ -302,11 +310,12 @@ export async function linkInTx(
           created: { ...emptyCounts() },
           linked: { matched: result.linked + result.alreadyLinked, decision },
           autoAccepted: true,
+          ...(added.length > 0 ? { linkAdded: added } : {}),
         },
       },
     });
   }
-  return { groupId, ...result };
+  return { groupId, ...result, added: added.length };
 }
 
 /** Key every unlinked pair, then settle the facts by the decision. */
