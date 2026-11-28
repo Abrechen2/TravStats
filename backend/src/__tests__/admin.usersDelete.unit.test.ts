@@ -41,6 +41,12 @@ jest.mock("../db", () => ({
   },
 }));
 
+// Share-group pruning has its own suite; this one is about the delete guards.
+jest.mock("../services/sharing/federation/pruneGroups", () => ({
+  accountShareGroups: jest.fn().mockResolvedValue([]),
+  pruneEmptyGroups: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock("../utils/logger", () => ({
   __esModule: true,
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
