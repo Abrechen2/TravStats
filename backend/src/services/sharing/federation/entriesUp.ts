@@ -22,6 +22,7 @@ import type { EntriesUpMessage, TripShareAck } from "../../../schemas/tripShareP
 import { kickDelivery } from "./deliveryKick";
 import { chunkEntries, ENTRIES_BYTES, wireEntriesOf } from "./entries";
 import { LOCAL_AUTHOR } from "./entryAuthors";
+import { newPortBudget } from "../../ports/uncodedPort";
 import { applyEntryCreate, type Admitted } from "./inbound";
 import { fromSpoke } from "./resync";
 import { serveOnce } from "./streams";
@@ -101,6 +102,8 @@ export const serveEntriesUp = (origin: string, message: EntriesUpMessage): Promi
         ref: member.rosterRef,
       },
     };
+    // The port cap counts across the whole message, not per entry (security review).
+    const portBudget = newPortBudget();
     await asPropagation(async () => {
       for (const entry of message.entries as WireEntry[]) {
         // Known here once (a record of who brought it in): removed since, not missed.
@@ -108,7 +111,7 @@ export const serveEntriesUp = (origin: string, message: EntriesUpMessage): Promi
           where: { groupId_shareKey: { groupId: group.id, shareKey: entry.shareKey } },
         });
         if (known) continue;
-        await applyEntryCreate(tx, s, entry);
+        await applyEntryCreate(tx, s, entry, portBudget);
       }
     });
     return { after: kickDelivery };

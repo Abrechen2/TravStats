@@ -16,7 +16,12 @@
  *   `DERIVE[entity]` (run by `copyInto`) decides it on this server's clock.
  */
 import type { DbTransaction } from "../../../../db";
-import { ensureCarriedPorts, loadUncodedPorts, uncodedPort } from "../../../ports/uncodedPort";
+import {
+  ensureCarriedPorts,
+  loadUncodedPorts,
+  uncodedPort,
+  type PortBudget,
+} from "../../../ports/uncodedPort";
 import type { SharedRow } from "../../adapters";
 import type { EntryRef } from "../../adapters/stop";
 import { SHARE_TYPES, type ShareEntity } from "../../shareTypes";
@@ -87,10 +92,11 @@ export const carriedPortRefs = (facts: readonly Facts[]): PortRef[] =>
 export async function ensureWirePorts(
   c: DbTransaction,
   facts: readonly Facts[],
-  origin: string
+  origin: string,
+  budget?: PortBudget
 ): Promise<void> {
   const refs = carriedPortRefs(facts);
-  if (refs.length > 0) await ensureCarriedPorts(c, refs, origin);
+  if (refs.length > 0) await ensureCarriedPorts(c, refs, origin, budget);
 }
 
 /**

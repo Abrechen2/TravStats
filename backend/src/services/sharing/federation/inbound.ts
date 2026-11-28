@@ -61,6 +61,7 @@ import {
   localKeyOf,
   receivedStatus,
 } from "./wire/decode";
+import { newPortBudget, type PortBudget } from "../../ports/uncodedPort";
 import { wireFactsOf } from "./wire/encode";
 import { ENTRY_SHAPES, type WireEntry } from "./wire/shapes";
 
@@ -274,8 +275,14 @@ async function applyFactUpdate(
 }
 
 /** One entry new to the recipient's trip (also an `entries-up` entry the home never knew, Q5). */
-export async function applyEntryCreate(tx: DbTransaction, s: Admitted, entry: WireEntry) {
-  await ensureWirePorts(tx, [entry.facts], s.origin);
+export async function applyEntryCreate(
+  tx: DbTransaction,
+  s: Admitted,
+  entry: WireEntry,
+  /** One budget for every entry of one message, so the port cap holds per message. */
+  portBudget: PortBudget = newPortBudget()
+) {
+  await ensureWirePorts(tx, [entry.facts], s.origin, portBudget);
   const [{ entity, row }] = await fromWireEntries(tx, [entry]);
   const key = row.shareKey as string;
   const held = await heldKeys(tx, entity, s.recipient.userId, s.recipient.id, [key]);

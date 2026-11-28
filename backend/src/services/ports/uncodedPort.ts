@@ -71,12 +71,21 @@ export const MAX_CARRIED_PORTS_PER_MESSAGE = 40;
  * catalogue port, no earlier user port) is added as a user port with the sender's name, country and
  * position, recording the server that brought it. Sharing UAT 2: the owner's Yangtze ports are his
  * own additions, so his father's server knew none of them and dropped every leg and the drawn line.
- * Returns how many were added; past the cap the rest stay unresolved port calls.
+ * Returns how many were added; past the message's budget (the cap counts across every entry of
+ * one message, security review) the rest stay unresolved port calls.
  */
+/** How many more ports one received message may still add; shared by all its entries. */
+export interface PortBudget {
+  left: number;
+}
+
+export const newPortBudget = (): PortBudget => ({ left: MAX_CARRIED_PORTS_PER_MESSAGE });
+
 export async function ensureCarriedPorts(
   client: PortWriter,
   refs: readonly UncodedPortRef[],
-  source: string
+  source: string,
+  budget: PortBudget = newPortBudget()
 ): Promise<number> {
   const wanted = refs.filter(
     (r) => r.name.trim() !== "" && Number.isFinite(r.lat) && Number.isFinite(r.lon)
@@ -92,7 +101,7 @@ export async function ensureCarriedPorts(
   for (const ref of wanted) {
     // Anything of that name at that place (catalogue or user port, ambiguous or not): nothing new.
     if (rows.some((r) => r.name === ref.name && near(r, ref))) continue;
-    if (added >= MAX_CARRIED_PORTS_PER_MESSAGE) break;
+    if (budget.left <= 0) break;
     const created = await client.port.create({
       data: {
         name: ref.name,
@@ -106,6 +115,7 @@ export async function ensureCarriedPorts(
     });
     rows.push(created);
     added += 1;
+    budget.left -= 1;
   }
   return added;
 }
