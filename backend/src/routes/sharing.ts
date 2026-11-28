@@ -259,7 +259,8 @@ router.post(
         body.userId,
         body.targetTripId,
         body.decision,
-        body.choices
+        body.choices,
+        body.add
       ),
     });
   })

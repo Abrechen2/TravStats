@@ -226,12 +226,13 @@ export async function linkTrip(
   otherId: string,
   targetTripId: string,
   decision: LinkDecision,
-  choices?: LinkChoices
+  choices?: LinkChoices,
+  add?: readonly string[]
 ): Promise<LinkResult> {
   return prisma.$transaction(
     async (tx) => {
       const trip = await agreedSides(tx, userId, tripId, otherId);
-      return linkInTx(tx, trip, userId, otherId, targetTripId, decision, choices);
+      return linkInTx(tx, trip, userId, otherId, targetTripId, decision, choices, add);
     },
     { timeout: LINK_TX_TIMEOUT_MS }
   );
@@ -295,7 +296,8 @@ export async function linkInTx(
     // companion they took off must not come back because someone linked a copy (rc46
     // UAT, "Robin Wittke" reappeared). The trip's people section asks them instead.
   }
-  if (joining || result.linked > 0) {
+  // Also for additions alone: the notice is where the undo finds what this link added (Codex P2).
+  if (joining || result.linked > 0 || added.length > 0) {
     await tx.shareNotice.create({
       data: {
         userId: otherId,

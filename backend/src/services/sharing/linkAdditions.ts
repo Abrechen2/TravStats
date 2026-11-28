@@ -72,17 +72,23 @@ export async function addOneSided(
 ): Promise<AddedEntry> {
   const adapter = ADAPTERS[row.entity];
   const key = row.row.shareKey ?? randomUUID();
-  if (!row.row.shareKey) await adapter.setKey(tx, row.row.id, key);
-  await spreadCreate(tx, adapter, spreadBy(ownerId, groupId), { ...row.row, shareKey: key });
   const trips = await tx.trip.findMany({
     where: { shareGroupId: groupId, userId: { not: ownerId } },
     select: { id: true, userId: true },
   });
   const ownerOf = new Map(trips.map((t) => [t.id, t.userId]));
-  const made = await delegateOf(tx, row.entity).findMany({
-    where: { shareKey: key, tripId: { in: [...ownerOf.keys()] } },
-    select: { id: true, tripId: true, createdAt: true, updatedAt: true },
-  });
+  const delegate = delegateOf(tx, row.entity);
+  const copiesNow = () =>
+    delegate.findMany({
+      where: { shareKey: key, tripId: { in: [...ownerOf.keys()] } },
+      select: { id: true, tripId: true, createdAt: true, updatedAt: true },
+    });
+  // Copies of that key that existed before (an entry already shared elsewhere) are not this
+  // link's: only rows it creates are recorded, and only those an undo may remove (Codex P2).
+  const before = new Set((await copiesNow()).map((c) => c.id));
+  if (!row.row.shareKey) await adapter.setKey(tx, row.row.id, key);
+  await spreadCreate(tx, adapter, spreadBy(ownerId, groupId), { ...row.row, shareKey: key });
+  const made = (await copiesNow()).filter((c) => !before.has(c.id));
   return {
     entity: row.entity,
     key,
@@ -115,8 +121,11 @@ export function tickedRows(
   ];
 }
 
-/** A copy saved again after it was added is the person's own work now: kept. */
-const EDIT_GRACE_MS = 2_000;
+/**
+ * A home entry's copy across servers is not recorded by id (it arrives after the link) and is
+ * judged by its own creation, which the copy path stamps within a moment of its update time.
+ */
+const ARRIVAL_GRACE_MS = 1_000;
 
 /**
  * Undo what a link added, before the acting person's trip leaves the group. Only in THEIR OWN trip
@@ -157,8 +166,12 @@ export async function undoAdditions(
       select: { id: true, tripId: true, createdAt: true, updatedAt: true },
     });
     for (const r of rows) {
-      const since = recorded.find((c) => c.id === r.id)?.at ?? r.createdAt.toISOString();
-      if (r.updatedAt.getTime() > new Date(since).getTime() + EDIT_GRACE_MS) {
+      const rec = recorded.find((c) => c.id === r.id);
+      // A recorded copy is unedited only at exactly the version the link wrote (Codex P2).
+      const edited = rec
+        ? r.updatedAt.getTime() !== new Date(rec.at).getTime()
+        : r.updatedAt.getTime() > r.createdAt.getTime() + ARRIVAL_GRACE_MS;
+      if (edited) {
         await tx.shareNotice.create({
           data: {
             userId,
