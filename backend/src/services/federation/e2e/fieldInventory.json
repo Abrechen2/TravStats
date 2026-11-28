@@ -69,7 +69,7 @@
     "personal": "",
     "photos": "",
     "documents": "",
-    "excluded": ""
+    "excluded": "carriedFrom"
   },
   "Trip": {
     "details": "id name color startDate endDate status startDay endDay startZone endZone category originLabel destinationLabel coverImageUrl coverCrop coverSource icon countries shareGroupId createdAt updatedAt",
