@@ -1,5 +1,6 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
+import { accountShareGroups, pruneEmptyGroups } from "../sharing/federation/pruneGroups";
 import { securityLogger } from "../../utils/logger";
 import { takeUserCountLock } from "../../utils/userCountLock";
 import { deleteAccountWithFiles } from "../files/accountFiles";
@@ -105,11 +106,14 @@ async function finishDeletion(userId: string): Promise<DepartureNotice> {
         // The cascade below is one statement through every row the account
         // owns (1.7M TravTrack rows on the largest one): above the pool's 30 s.
         await raiseStatementTimeout(tx, "accountDeletion");
+        const groups = await accountShareGroups(tx, userId);
         const gone = await tx.user.deleteMany({
           where: { id: userId, deletionStartedAt: { not: null } },
         });
         if (gone.count !== 1) throw new AppError("The deletion is no longer reserved", 409);
         await tx.syncChange.deleteMany({ where: { userId } });
+        // Groups only this account held are empty shells now (sharing UAT 2).
+        await pruneEmptyGroups(tx, groups);
       },
       { timeout: LONG_JOB_STATEMENT_TIMEOUT_MS.accountDeletion }
     )
