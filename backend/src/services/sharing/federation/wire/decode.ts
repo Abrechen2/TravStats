@@ -16,7 +16,7 @@
  *   `DERIVE[entity]` (run by `copyInto`) decides it on this server's clock.
  */
 import type { DbTransaction } from "../../../../db";
-import { ensureUncodedPorts, uncodedPort } from "../../../ports/uncodedPort";
+import { ensureCarriedPorts, loadUncodedPorts, uncodedPort } from "../../../ports/uncodedPort";
 import type { SharedRow } from "../../adapters";
 import type { EntryRef } from "../../adapters/stop";
 import { SHARE_TYPES, type ShareEntity } from "../../shareTypes";
@@ -63,17 +63,54 @@ const keysOf = <T>(values: (T | null | undefined)[]): T[] => [
 ];
 
 /** One query per catalogue for everything a batch names. */
-async function resolver(c: DbTransaction, entries: readonly WireEntry[]): Promise<Resolver> {
-  const f = entries.map((e) => e.facts);
+/** Every port a batch of wire facts names (the cruise's ends, its calls, legs and lines). */
+function portRefsOf(f: readonly Facts[]): (PortRef | null)[] {
   const stops = f.flatMap((x) => (Array.isArray(x.stops) ? (x.stops as Facts[]) : []));
   const legs = f.flatMap((x) => (Array.isArray(x.legs) ? (x.legs as Facts[]) : []));
   const routes = f.flatMap((x) => (Array.isArray(x.legRoutes) ? (x.legRoutes as Facts[]) : []));
-  const portRefs = [
+  return [
     ...f.flatMap((x) => [x.departurePort, x.arrivalPort]),
     ...stops.map((s) => s.port),
     ...legs.flatMap((l) => [l.fromPort, l.toPort]),
     ...routes.flatMap((l) => [l.fromPort, l.toPort]),
   ] as (PortRef | null)[];
+}
+
+/** The code-less ports wire facts name — what `ensureCarriedPorts` makes available on apply. */
+export const carriedPortRefs = (facts: readonly Facts[]): PortRef[] =>
+  portRefsOf(facts).filter((p): p is PortRef => !!p && !p.unlocode);
+
+/**
+ * Before an APPLY (accept, link, a received entry or change): add the code-less ports the facts
+ * name and this catalogue lacks, recording the server (sharing UAT 2). Decoding itself only reads.
+ */
+export async function ensureWirePorts(
+  c: DbTransaction,
+  facts: readonly Facts[],
+  origin: string
+): Promise<void> {
+  const refs = carriedPortRefs(facts);
+  if (refs.length > 0) await ensureCarriedPorts(c, refs, origin);
+}
+
+/**
+ * The code-less ports wire facts name that nothing here matches: shown in a dry run as "wird beim
+ * Übernehmen angelegt" — read only.
+ */
+export async function unknownCarriedPorts(c: DbTransaction, facts: readonly Facts[]) {
+  const refs = carriedPortRefs(facts);
+  const rows = await loadUncodedPorts(
+    c,
+    refs.map((r) => r.name)
+  );
+  const unknown = refs.filter((r) => uncodedPort(rows, r) === null);
+  return [...new Set(unknown.map((r) => r.name))];
+}
+
+/** One query per catalogue for everything a batch names. Reads only — never adds a row. */
+async function resolver(c: DbTransaction, entries: readonly WireEntry[]): Promise<Resolver> {
+  const f = entries.map((e) => e.facts);
+  const portRefs = portRefsOf(f);
   const stations = f.flatMap((x) => [x.depStation, x.arrStation]) as (StationRef | null)[];
   const airports = f.flatMap((x) => [x.pickupAirport, x.returnAirport]) as (AirportRef | null)[];
   const unlocodes = keysOf(portRefs.map((p) => p?.unlocode));
@@ -88,10 +125,9 @@ async function resolver(c: DbTransaction, entries: readonly WireEntry[]): Promis
       where: { unlocode: { in: unlocodes } },
       select: { id: true, unlocode: true },
     }),
-    // Ports the sender named without a code and this catalogue lacks are added (sharing UAT 2).
-    ensureUncodedPorts(
+    loadUncodedPorts(
       c,
-      portRefs.filter((p): p is PortRef => !!p && !p.unlocode)
+      portRefs.flatMap((p) => (p && !p.unlocode ? [p.name] : []))
     ),
     c.ship.findMany({ where: { imo: { in: imos } }, select: { id: true, imo: true } }),
     c.railStation.findMany({

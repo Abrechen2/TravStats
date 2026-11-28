@@ -32,7 +32,7 @@ afterAll(async () => {
 });
 
 describe("resolving a wire entry against this server's catalogue", () => {
-  it("matches a port by UN/LOCODE; an unknown coded call stays unresolved, an unknown code-less one is added", async () => {
+  it("matches a port by UN/LOCODE; an unmatched call stays a port call under its name", async () => {
     const lis = await prisma.port.create({
       data: { name: "Lisboa", unlocode: `Y${tag}`, lat: 38.7, lon: -9.1 },
     });
@@ -65,7 +65,7 @@ describe("resolving a wire entry against this server's catalogue", () => {
             stop(1, port("Lisboa", `Y${tag}`)),
             stop(2, null, true),
             stop(3, port("Funchal", "ZZNONE")),
-            stop(4, port(`Own Pier ${tag}`, null)),
+            stop(4, port("Own Pier", null)),
           ],
           legs: [
             {
@@ -83,8 +83,6 @@ describe("resolving a wire entry against this server's catalogue", () => {
         },
       }),
     ]);
-    const ownPier = await prisma.port.findFirstOrThrow({ where: { name: `Own Pier ${tag}` } });
-    made.ports.push(ownPier.id);
     const f = row.facts as Record<string, unknown> & {
       stops: { portId: number | null; isAtSea: boolean; unresolvedPortName: string | null }[];
     };
@@ -101,10 +99,11 @@ describe("resolving a wire entry against this server's catalogue", () => {
       [lis.id, false, null],
       [null, true, null],
       [null, false, "Funchal"],
-      [ownPier.id, false, null],
+      [null, false, "Own Pier"],
     ]);
-    // Sharing UAT 2: a port without a code this catalogue lacks is added as a user port, once.
-    expect(ownPier).toMatchObject({ name: `Own Pier ${tag}`, isUserAdded: true, unlocode: null });
+    // Decoding only reads: an unknown code-less port is never added here (security review of
+    // sharing UAT 2) — only accepting or applying the entry adds it.
+    expect(await prisma.port.count({ where: { name: "Own Pier" } })).toBe(0);
     for (const key of ["ship", "departurePort", "arrivalPort"]) expect(f).not.toHaveProperty(key);
   });
 

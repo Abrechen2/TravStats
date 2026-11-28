@@ -54,7 +54,13 @@ import { addressed, requireReceiving } from "./peerMember";
 import { mayReach } from "./roster";
 import { rejectWith, serveOnce, takeSeq } from "./streams";
 import { recordWithheld } from "./withheld";
-import { fromWireEntries, fromWireFacts, localKeyOf, receivedStatus } from "./wire/decode";
+import {
+  ensureWirePorts,
+  fromWireEntries,
+  fromWireFacts,
+  localKeyOf,
+  receivedStatus,
+} from "./wire/decode";
 import { wireFactsOf } from "./wire/encode";
 import { ENTRY_SHAPES, type WireEntry } from "./wire/shapes";
 
@@ -152,11 +158,15 @@ async function ownCopy(tx: DbTransaction, s: Admitted, entity: ShareEntity, shar
 
 /** The changes' values on one side, parsed by their codecs and resolved against this catalogue. */
 /** The changes' values on one side, parsed by their codecs (`wire`) and resolved here (`local`). */
-async function sideOf(tx: DbTransaction, message: FactUpdateMessage, side: "before" | "after") {
+function rawSide(message: FactUpdateMessage, side: "before" | "after"): Record<string, unknown> {
   const shape = ENTRY_SHAPES[message.entity];
-  const wire: Record<string, unknown> = Object.fromEntries(
+  return Object.fromEntries(
     message.changes.map((ch) => [ch.field, shape[ch.field].wire.parse(ch[side])])
   );
+}
+
+async function sideOf(tx: DbTransaction, message: FactUpdateMessage, side: "before" | "after") {
+  const wire = rawSide(message, side);
   return { wire, local: await fromWireFacts(tx, message.entity, wire) };
 }
 
@@ -177,6 +187,8 @@ async function applyFactUpdate(
   await lockCopy(tx, entity, found.id);
   const [copy] = await adapter.load(tx, [found.id]);
   if (!copy) return [];
+  // A change that brings a code-less port this catalogue lacks: added now, as it is applied.
+  if (entity === "cruise") await ensureWirePorts(tx, [rawSide(message, "after")], s.origin);
   const [sent, wanted] = await Promise.all([
     sideOf(tx, message, "before"),
     sideOf(tx, message, "after"),
@@ -263,6 +275,7 @@ async function applyFactUpdate(
 
 /** One entry new to the recipient's trip (also an `entries-up` entry the home never knew, Q5). */
 export async function applyEntryCreate(tx: DbTransaction, s: Admitted, entry: WireEntry) {
+  await ensureWirePorts(tx, [entry.facts], s.origin);
   const [{ entity, row }] = await fromWireEntries(tx, [entry]);
   const key = row.shareKey as string;
   const held = await heldKeys(tx, entity, s.recipient.userId, s.recipient.id, [key]);

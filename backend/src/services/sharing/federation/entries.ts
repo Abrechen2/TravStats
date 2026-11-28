@@ -34,7 +34,7 @@ import {
 } from "../../../schemas/tripSharePeer";
 import { kickDelivery } from "./deliveryKick";
 import { runDeliveries } from "./outbox";
-import { fromWireEntries } from "./wire/decode";
+import { ensureWirePorts, fromWireEntries } from "./wire/decode";
 import { toWireEntries } from "./wire/encode";
 import type { WireEntry } from "./wire/shapes";
 import { isHeld, isReceiving } from "./peerMember";
@@ -310,6 +310,12 @@ export function serveEntries(origin: string, message: EntriesMessage): Promise<T
       });
       throw rejectWith(held.some(isHeld) ? "suspended" : "not-member");
     }
+    // Accepted: the code-less ports the entries name and this catalogue lacks are added now.
+    await ensureWirePorts(
+      tx,
+      (message.entries as WireEntry[]).map((e) => e.facts),
+      origin
+    );
     const rows = await fromWireEntries(tx, message.entries as WireEntry[]);
     const authorOf = new Map(message.authors.map((a) => [a.shareKey, a.ref]));
     for (const recipient of recipients) {

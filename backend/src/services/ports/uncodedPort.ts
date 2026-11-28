@@ -20,6 +20,8 @@ export interface UncodedPortRow {
   country: string | null;
   lat: number;
   lon: number;
+  /** A port a person or a shared cruise added; a catalogue port of the same place wins over it. */
+  isUserAdded?: boolean;
 }
 
 export interface UncodedPortRef {
@@ -32,7 +34,7 @@ export interface UncodedPortRef {
 type PortFinder = { port: Pick<DbTransaction["port"], "findMany"> };
 type PortWriter = { port: Pick<DbTransaction["port"], "findMany" | "create"> };
 
-/** The catalogue's code-less ports carrying any of these names (user-added ports never match). */
+/** The code-less ports carrying any of these names — read only; `uncodedPort` picks among them. */
 export async function loadUncodedPorts(
   client: PortFinder,
   names: readonly string[]
@@ -40,66 +42,70 @@ export async function loadUncodedPorts(
   const unique = [...new Set(names.filter((n) => n.trim() !== ""))];
   if (unique.length === 0) return [];
   return client.port.findMany({
-    where: { name: { in: unique }, unlocode: null, isUserAdded: false },
-    select: { id: true, name: true, country: true, lat: true, lon: true },
+    where: { name: { in: unique }, unlocode: null },
+    select: { id: true, name: true, country: true, lat: true, lon: true, isUserAdded: true },
     orderBy: { id: "asc" },
   });
-}
-
-/** The ONE catalogue port of that name, country and place — else none. */
-export function uncodedPort(rows: readonly UncodedPortRow[], ref: UncodedPortRef): number | null {
-  const hits = rows.filter(
-    (r) =>
-      r.name === ref.name &&
-      r.country === ref.country &&
-      haversineKm({ lat: r.lat, lon: r.lon }, { lat: ref.lat, lon: ref.lon }) <=
-        PORT_POSITION_MATCH_KM
-  );
-  // Two candidates are a guess between them: left unresolved, the name is kept.
-  return hits.length === 1 ? hits[0].id : null;
 }
 
 const near = (r: UncodedPortRow, ref: UncodedPortRef) =>
   haversineKm({ lat: r.lat, lon: r.lon }, { lat: ref.lat, lon: ref.lon }) <= PORT_POSITION_MATCH_KM;
 
 /**
- * The ports a received cruise names without a UN/LOCODE, made available here: a catalogue port of
- * that name, country and place first; else one a user (or an earlier share) added there; else a new
- * user-added port with the sender's name, country and position. Sharing UAT 2: the owner's Yangtze
- * ports are his own additions, so the receiver knew none of them and dropped every leg and the drawn
- * line silently. Two candidates of one name at one place are not guessed between, and nothing new
- * is made beside them.
+ * The ONE port of that name, country and place — a catalogue port first, else one a person or a
+ * shared cruise added there. Two candidates are a guess between them: none.
  */
-export async function ensureUncodedPorts(
+export function uncodedPort(rows: readonly UncodedPortRow[], ref: UncodedPortRef): number | null {
+  const hits = rows.filter((r) => r.name === ref.name && r.country === ref.country && near(r, ref));
+  const catalogue = hits.filter((r) => !r.isUserAdded);
+  if (catalogue.length > 0) return catalogue.length === 1 ? catalogue[0].id : null;
+  return hits.length === 1 ? hits[0].id : null;
+}
+
+/** At most this many ports one received message may add — a cruise names a few dozen at most. */
+export const MAX_CARRIED_PORTS_PER_MESSAGE = 40;
+
+/**
+ * Make the code-less ports a received cruise names available here — ONLY on accepting or applying
+ * the entry, never while reading or comparing it. A port with nothing of its name within 1 km (no
+ * catalogue port, no earlier user port) is added as a user port with the sender's name, country and
+ * position, recording the server that brought it. Sharing UAT 2: the owner's Yangtze ports are his
+ * own additions, so his father's server knew none of them and dropped every leg and the drawn line.
+ * Returns how many were added; past the cap the rest stay unresolved port calls.
+ */
+export async function ensureCarriedPorts(
   client: PortWriter,
-  refs: readonly UncodedPortRef[]
-): Promise<UncodedPortRow[]> {
-  const names = [...new Set(refs.map((r) => r.name).filter((n) => n.trim() !== ""))];
-  if (names.length === 0) return [];
-  const rows = await client.port.findMany({
+  refs: readonly UncodedPortRef[],
+  source: string
+): Promise<number> {
+  const wanted = refs.filter(
+    (r) => r.name.trim() !== "" && Number.isFinite(r.lat) && Number.isFinite(r.lon)
+  );
+  const names = [...new Set(wanted.map((r) => r.name))];
+  if (names.length === 0) return 0;
+  const rows: UncodedPortRow[] = await client.port.findMany({
     where: { name: { in: names }, unlocode: null },
     select: { id: true, name: true, country: true, lat: true, lon: true, isUserAdded: true },
     orderBy: { id: "asc" },
   });
-  const catalogue = rows.filter((r) => !r.isUserAdded);
-  const added = rows.filter((r) => r.isUserAdded);
-  const out: UncodedPortRow[] = [...catalogue];
-  for (const ref of refs) {
-    if (ref.name.trim() === "" || !Number.isFinite(ref.lat) || !Number.isFinite(ref.lon)) continue;
-    const sameName = (r: UncodedPortRow) => r.name === ref.name && near(r, ref);
-    if (catalogue.some(sameName)) continue;
-    const own = added.filter((r) => sameName(r) && r.country === ref.country);
-    if (own.length === 1) {
-      if (!out.includes(own[0])) out.push(own[0]);
-      continue;
-    }
-    if (own.length > 1 || added.some(sameName)) continue;
+  let added = 0;
+  for (const ref of wanted) {
+    // Anything of that name at that place (catalogue or user port, ambiguous or not): nothing new.
+    if (rows.some((r) => r.name === ref.name && near(r, ref))) continue;
+    if (added >= MAX_CARRIED_PORTS_PER_MESSAGE) break;
     const created = await client.port.create({
-      data: { name: ref.name, country: ref.country, lat: ref.lat, lon: ref.lon, isUserAdded: true },
+      data: {
+        name: ref.name,
+        country: ref.country,
+        lat: ref.lat,
+        lon: ref.lon,
+        isUserAdded: true,
+        carriedFrom: source,
+      },
       select: { id: true, name: true, country: true, lat: true, lon: true, isUserAdded: true },
     });
-    added.push(created);
-    out.push(created);
+    rows.push(created);
+    added += 1;
   }
-  return out;
+  return added;
 }

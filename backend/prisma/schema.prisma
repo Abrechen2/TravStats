@@ -3469,6 +3469,9 @@ model Port {
   timezone    String?
   region      String?
   isUserAdded Boolean @default(false) @map("is_user_added")
+  /// The server a shared cruise brought this port from (sharing UAT 2): a user port added when its
+  /// receiver accepted the entry, not one a person typed in. Null for every other row.
+  carriedFrom String? @map("carried_from")
 
   cruisesDeparting Cruise[]     @relation("CruiseDeparture")
   cruisesArriving  Cruise[]     @relation("CruiseArrival")
