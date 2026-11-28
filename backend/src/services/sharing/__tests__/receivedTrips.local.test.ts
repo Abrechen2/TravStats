@@ -96,3 +96,23 @@ it("without the recipient's own consent, or over a same-name companion, nothing 
     (await prisma.companion.findUniqueOrThrow({ where: { id: own.id } })).linkedUserId
   ).toBeNull();
 });
+
+// Sharing UAT 2: a link of the reader's own trip read "hat die Reise mit dir geteilt" in the
+// banner; the item now says it was a link, so the banner can say "hat eure Reise verknüpft".
+it("marks a link of the reader's own trip apart from a newly shared one", async () => {
+  const anna = await user("Anna");
+  const ben = await user("Ben");
+  const trip = await prisma.trip.create({ data: { userId: ben, name: "Hawaii 2013" } });
+  await prisma.shareNotice.create({
+    data: {
+      userId: ben,
+      actorId: anna,
+      kind: "shared",
+      entityType: "trip",
+      entityKey: trip.id,
+      after: { tripName: "Hawaii 2013", tripCreated: false, linked: { matched: 27 } },
+    },
+  });
+  const [item] = (await receivedTrips(ben)).items;
+  expect(item).toMatchObject({ kind: "shared", tripName: "Hawaii 2013", linked: true });
+});

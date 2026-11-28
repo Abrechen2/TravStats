@@ -20,6 +20,11 @@ export interface ReceivedTripItem {
   from: { displayName: string; origin: string | null };
   /** Taken without a question because the caller's consent said yes beforehand. */
   autoAccepted: boolean;
+  /**
+   * The caller's own trip was LINKED with the sender's copy, not received as a new trip — the
+   * banner says "hat eure Reise verknüpft" (sharing UAT 2).
+   */
+  linked?: boolean;
 }
 
 export interface ReceivedTrips {
@@ -58,6 +63,7 @@ export async function receivedTrips(userId: string): Promise<ReceivedTrips> {
           ? { displayName: remote.displayName, origin: remote.origin }
           : { displayName: "", origin: null },
       autoAccepted: after.autoAccepted === true,
+      linked: after.linked !== undefined && after.linked !== null,
     };
   });
   const offered: ReceivedTripItem[] = offers.map((o) => ({

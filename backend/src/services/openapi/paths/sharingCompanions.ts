@@ -108,6 +108,7 @@ registry.registerPath({
             tripName: z.string(),
             from: z.object({ displayName: z.string(), origin: z.string().nullable() }),
             autoAccepted: z.boolean(),
+            linked: z.boolean().optional().describe("A link of the caller's own trip"),
           })
         ),
         count: z.number().int(),
