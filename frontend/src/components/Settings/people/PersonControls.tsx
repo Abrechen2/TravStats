@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
+import { originHost } from "../../../lib/personHandle";
 import { Switch } from "../../ui/Field";
 import OverflowMenu from "../../ui/OverflowMenu";
 import type { OverflowEntry } from "../../ui/OverflowMenu";
@@ -222,7 +223,12 @@ export function PersonMenu({
   return (
     <OverflowMenu
       entries={entries}
-      label={t(`${NS}.menu.label`, { name: person.name })}
+      label={
+        // Two "Norbert Wittke" on two servers must not share one button name (sharing UAT 2).
+        account?.kind === "remote"
+          ? t(`${NS}.menu.labelRemote`, { name: person.name, server: originHost(account.origin) })
+          : t(`${NS}.menu.label`, { name: person.name })
+      }
       testId={`person-menu-${person.key}`}
       disabled={disabled}
     />

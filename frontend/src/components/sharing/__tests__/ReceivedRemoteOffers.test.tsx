@@ -160,7 +160,9 @@ describe("ReceivedRemoteOffers", () => {
     await user.click(await screen.findByRole("button", { name: "sharing:remote.offers.link" }));
     await user.click(await screen.findByRole("button", { name: "sharing:link.compare" }));
     await user.click(await screen.findByRole("button", { name: "sharing:link.confirm" }));
-    await waitFor(() => expect(linkApi.offerLink).toHaveBeenCalledWith("o1", "t2", "both", {}));
+    await waitFor(() =>
+      expect(linkApi.offerLink).toHaveBeenCalledWith("o1", "t2", "both", expect.any(Object), [])
+    );
     expect(await screen.findByText("sharing:remote.offers.settleFailed")).toBeInTheDocument();
   });
 });

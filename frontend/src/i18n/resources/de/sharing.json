@@ -1056,7 +1056,8 @@
       "close": "Schließen"
     },
     "menu": {
-      "label": "Aktionen für {{name}}"
+      "label": "Aktionen für {{name}}",
+      "labelRemote": "Aktionen für {{name}} ({{server}})"
     }
   },
   "receivedBanner": {
@@ -1068,7 +1069,8 @@
     "more_one": "und {{count}} weitere",
     "more_other": "und {{count}} weitere",
     "seen": "Gesehen",
-    "seenFailed": "Das hat nicht geklappt. Bitte versuche es noch einmal."
+    "seenFailed": "Das hat nicht geklappt. Bitte versuche es noch einmal.",
+    "linked": "{{name}} hat eure Reise „{{trip}}“ verknüpft."
   },
   "link": {
     "open": "Mit vorhandener Kopie verknüpfen",
@@ -1088,7 +1090,7 @@
     "conflict": "bei dir {{here}}, bei {{name}} {{there}}",
     "onlyHereTitle": "Nur bei dir",
     "onlyThereTitle": "Nur bei {{name}}",
-    "nothingCreated": "Einträge, die nur eine Seite hat, bleiben, wo sie sind; beim Verknüpfen wird nichts kopiert.",
+    "nothingCreated": "Einträge, die nur eine Seite hat, ergänze ich nur, wenn du sie ankreuzt.",
     "decisionTitle": "Abweichende Angaben übernehmen",
     "decision": {
       "both": "Beide behalten (jede Seite behält ihre Angaben)",
@@ -1165,12 +1167,20 @@
     },
     "better": "genauer",
     "recomputed": "Wird neu berechnet: {{fields}}",
-    "decisionRule": "Eine leere, gerade oder ungenauere Angabe überschreibt nie eine ausgefüllte, gezeichnete oder genauere – egal, welche Seite du wählst."
+    "decisionRule": "Eine leere, gerade oder ungenauere Angabe überschreibt nie eine ausgefüllte, gezeichnete oder genauere – egal, welche Seite du wählst.",
+    "oneSided": {
+      "add": "„{{entry}}“ auf der anderen Seite ergänzen",
+      "addShort": "Ergänzen?",
+      "duplicate": "möglicherweise doppelt mit {{entry}} ({{day}})",
+      "open": "Ansehen",
+      "compare": "Hier: {{entry}} · bei {{name}}: {{other}}"
+    },
+    "newPorts": "Häfen werden beim Übernehmen angelegt: {{ports}}"
   },
   "bulk": {
     "open": "Ansehen",
     "title": "Alle passenden Reisen mit {{name}} verknüpfen",
-    "senders": "der anderen Seite",
+    "senders": "die andere Seite",
     "intro": "Alle Reisen, die du und {{name}} beide habt. Was zusammenpasst, verknüpfe ich; nichts wird doppelt angelegt.",
     "loading": "Reisen werden gesucht …",
     "awaitingConsent": "{{name}} muss das Teilen erst annehmen. Danach siehst du hier die Reisen.",
@@ -1179,16 +1189,13 @@
     "linking": "Verknüpfe Reise {{done}} von {{total}} …",
     "paused": "Pause, weiter in {{minutes}} min",
     "stop": "Anhalten",
-    "summary": "{{auto}} Reisen werden verknüpft, {{review}} brauchen deine Entscheidung.",
-    "autoTitle": "Diese {{count}} Reisen passen zusammen",
-    "run": "{{count}} Reisen verknüpfen",
     "reviewTitle": "Hier entscheidest du selbst",
     "review": {
       "conflict": "beide Seiten haben verschiedene Angaben",
       "ambiguous": "passt zu mehr als einer Reise",
-      "noTrip": "keine passende eigene Reise",
       "nothingMatched": "kein Eintrag passt zusammen",
-      "outdated": "Gegenseite muss TravStats aktualisieren – du kannst die Reise unten einzeln annehmen"
+      "outdated": "Gegenseite muss TravStats aktualisieren – du kannst die Reise unten einzeln annehmen",
+      "additions": "Einträge, die nur eine Seite hat – du entscheidest, was ergänzt wird"
     },
     "resultsTitle": "Ergebnis",
     "pairName": "{{mine}} ↔ {{theirs}} ({{from}})",
@@ -1238,7 +1245,18 @@
         "loadFailed": "Die Reisen konnten nicht geladen werden.",
         "proposeFailed": "Das Vorschlagen hat nicht geklappt."
       }
-    }
+    },
+    "summaryAuto_one": "1 Reise wird verknüpft",
+    "summaryAuto_other": "{{count}} Reisen werden verknüpft",
+    "summaryReview_one": "1 braucht deine Entscheidung.",
+    "summaryReview_other": "{{count}} brauchen deine Entscheidung.",
+    "autoTitle_one": "Diese Reise passt zusammen",
+    "autoTitle_other": "Diese {{count}} Reisen passen zusammen",
+    "run_one": "1 Reise verknüpfen",
+    "run_other": "{{count}} Reisen verknüpfen",
+    "additionsTitle": "Ergänzungen bestätigen",
+    "newTripsTitle_one": "Neue Reise (keine Kopie bei dir): 1",
+    "newTripsTitle_other": "Neue Reisen (keine Kopie bei dir): {{count}}"
   },
   "proposals": {
     "title": "Vorgeschlagene Verknüpfungen",

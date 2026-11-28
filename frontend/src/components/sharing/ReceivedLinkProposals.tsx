@@ -73,8 +73,8 @@ export default function ReceivedLinkProposals({
           otherName={t("sharing:bulk.senders")}
           loadPairs={() => sharingLinkApi.proposalBulkPairs()}
           preview={(pair) => sharingLinkApi.proposalPreview(pair.id, pair.trip!.id)}
-          link={(pair, decision, choices) =>
-            sharingLinkApi.proposalLink(pair.id, pair.trip!.id, decision, choices)
+          link={(pair, decision, choices, add) =>
+            sharingLinkApi.proposalLink(pair.id, pair.trip!.id, decision, choices, add)
           }
           undo={(pair) => sharingLinkApi.leave(pair.trip!.id)}
           failure={(err, fallback) => ({ key: sharingErrorKey(err, fallback) })}
@@ -96,8 +96,8 @@ export default function ReceivedLinkProposals({
                   otherName={p.from.displayName}
                   loadCandidates={() => sharingLinkApi.proposalCandidates(p.id)}
                   preview={(tripId) => sharingLinkApi.proposalPreview(p.id, tripId)}
-                  link={(tripId, decision, choices) =>
-                    sharingLinkApi.proposalLink(p.id, tripId, decision, choices)
+                  link={(tripId, decision, choices, add) =>
+                    sharingLinkApi.proposalLink(p.id, tripId, decision, choices, add)
                   }
                   failure={(err, fallback) => ({ key: sharingErrorKey(err, fallback) })}
                   onLinked={() => {

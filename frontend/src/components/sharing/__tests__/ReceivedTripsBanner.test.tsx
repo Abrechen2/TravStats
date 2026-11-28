@@ -100,4 +100,31 @@ describe("ReceivedTripsBanner — a shared trip is noticed", () => {
     const banner = await screen.findByTestId("received-trips-banner");
     expect(banner.textContent).not.toContain("http://");
   });
+
+  // Sharing UAT 2: a link of the reader's own trip read "hat die Reise mit dir geteilt".
+  it("says a link was a link, not a newly shared trip", async () => {
+    api.receivedTrips.mockResolvedValue({
+      count: 1,
+      items: [
+        {
+          kind: "shared",
+          id: "n1",
+          tripId: "t1",
+          tripName: "Hawaii 2013",
+          from: { displayName: "Dennis", origin: "http://192.0.2.7:3010" },
+          autoAccepted: true,
+          linked: true,
+        },
+      ],
+    });
+    render(
+      <MemoryRouter>
+        <ReceivedTripsBanner />
+      </MemoryRouter>
+    );
+    const banner = await screen.findByTestId("received-trips-banner");
+    expect(banner.textContent).toContain("receivedBanner.linked");
+    expect(banner.textContent).not.toContain("receivedBanner.shared");
+    expect(banner.textContent).not.toContain("receivedBanner.autoAccepted");
+  });
 });

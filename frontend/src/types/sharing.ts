@@ -216,6 +216,8 @@ export interface ReceivedTripItem {
   from: { displayName: string; origin: string | null };
   /** Taken without a question because the reader's consent said yes beforehand. */
   autoAccepted: boolean;
+  /** The reader's own trip was linked with the sender's copy (sharing UAT 2). */
+  linked?: boolean;
 }
 
 export interface ReceivedTrips {

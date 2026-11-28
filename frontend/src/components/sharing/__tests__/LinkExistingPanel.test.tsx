@@ -111,7 +111,15 @@ describe("LinkExistingPanel — link an existing copy (forgejo#440)", () => {
 
     fireEvent.click(screen.getByLabelText("sharing:link.decision.theirs"));
     fireEvent.click(screen.getByRole("button", { name: "sharing:link.confirm" }));
-    await waitFor(() => expect(props.link).toHaveBeenCalledWith("t2", "theirs", {}));
+    // Every field goes as its select shows it, and nothing one-sided is added unticked.
+    await waitFor(() =>
+      expect(props.link).toHaveBeenCalledWith(
+        "t2",
+        "theirs",
+        { "flight:f1": { departureTime: "theirs" }, "ferry:r1": { geometry: "theirs" } },
+        []
+      )
+    );
     expect(props.onLinked).toHaveBeenCalledWith({ linked: 2 }, "t2");
   });
 
@@ -151,9 +159,12 @@ describe("LinkExistingPanel — a readable dry run with per-field choices (UAT 2
     fireEvent.change(selects[0] as HTMLSelectElement, { target: { value: "both" } });
     fireEvent.click(screen.getByRole("button", { name: "sharing:link.confirm" }));
     await waitFor(() =>
-      expect(props.link).toHaveBeenCalledWith("t2", "mine", {
-        "flight:f1": { departureTime: "both" },
-      })
+      expect(props.link).toHaveBeenCalledWith(
+        "t2",
+        "mine",
+        { "flight:f1": { departureTime: "both" }, "ferry:r1": { geometry: "theirs" } },
+        []
+      )
     );
   });
 });
@@ -178,5 +189,57 @@ describe("LinkExistingPanel — before the other side agreed", () => {
     expect(await screen.findByTestId("link-awaiting-consent")).toBeInTheDocument();
     expect(screen.queryByText(/Pensão Amor/)).toBeNull();
     expect(screen.queryByRole("button", { name: "sharing:link.confirm" })).toBeNull();
+  });
+});
+
+/**
+ * Sharing UAT 2 (owner, 2026-11-28): a field marked "genauer" starts at that value whatever the
+ * trip-level decision; one-sided entries are ticked one by one (off by default), and a likely
+ * duplicate is unlocked only after it was looked at.
+ */
+describe("LinkExistingPanel — better values first, one-sided entries only on a tick", () => {
+  it("preselects the better value even when the decision is 'keep both'", async () => {
+    setup();
+    fireEvent.click(await screen.findByRole("button", { name: "sharing:link.compare" }));
+    const selects = await screen.findAllByRole("combobox");
+    expect((selects[1] as HTMLSelectElement).value).toBe("theirs");
+  });
+
+  it("adds a ticked entry; a likely duplicate unlocks only after opening it", async () => {
+    const props = setup({
+      preview: vi.fn().mockResolvedValue({
+        ...dryRun,
+        onlyThere: [
+          {
+            entity: "lodgingStay",
+            label: "Pensão Amor",
+            when: "2030-06-05T00:00:00.000Z",
+            ref: "lodgingStay:s9",
+            duplicateOf: null,
+          },
+          {
+            entity: "rail",
+            label: "IC 961 Helsinki → Turku",
+            when: "2030-06-06T06:00:00.000Z",
+            ref: "rail:r9",
+            duplicateOf: { label: "961 Helsingfors → Åbo", when: "2030-06-06T09:00:00.000Z" },
+          },
+        ],
+        newPorts: ["Fengdu"],
+      }),
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "sharing:link.compare" }));
+    const boxes = await screen.findAllByRole("checkbox");
+    expect(boxes.map((b) => (b as HTMLInputElement).checked)).toEqual([false, false]);
+    expect((boxes[1] as HTMLInputElement).disabled).toBe(true);
+    expect(screen.getByTestId("link-duplicate-hint").textContent).toContain("oneSided.duplicate");
+    expect(screen.getByTestId("link-new-ports").textContent).toContain("link.newPorts");
+    fireEvent.click(boxes[0]);
+    fireEvent.click(screen.getByRole("button", { name: "sharing:link.oneSided.open" }));
+    expect((boxes[1] as HTMLInputElement).disabled).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "sharing:link.confirm" }));
+    await waitFor(() =>
+      expect(props.link).toHaveBeenCalledWith("t2", "both", expect.any(Object), ["lodgingStay:s9"])
+    );
   });
 });

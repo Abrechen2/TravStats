@@ -81,12 +81,14 @@ export default function ReceivedTripsBanner({
       {items.slice(0, SHOWN).map((item) => (
         <div key={item.id} className="flex flex-wrap items-center" style={{ gap: 8 }}>
           <span style={{ fontWeight: 600 }}>
-            {t(`${NS}.${item.kind === "offer" ? "offered" : "shared"}`, {
+            {t(`${NS}.${item.kind === "offer" ? "offered" : item.linked ? "linked" : "shared"}`, {
               name: from(item),
               trip: item.tripName,
             })}
           </span>
-          {item.autoAccepted && <span className="t-caption">{t(`${NS}.autoAccepted`)}</span>}
+          {item.autoAccepted && !item.linked && (
+            <span className="t-caption">{t(`${NS}.autoAccepted`)}</span>
+          )}
           {item.tripId ? (
             <Link to={`/trips/${item.tripId}`}>{t(`${NS}.open`)}</Link>
           ) : (

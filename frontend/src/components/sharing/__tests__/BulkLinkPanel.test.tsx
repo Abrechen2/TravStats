@@ -85,8 +85,8 @@ describe("BulkLinkPanel (UAT 2026-11-27)", () => {
   it("summarises first, links the automatic pair with the quality rule, lists the rest for review", async () => {
     const props = setup();
     const summary = await screen.findByTestId("bulk-summary");
-    expect(summary.textContent).toContain('"auto":1');
-    expect(summary.textContent).toContain('"review":2');
+    expect(summary.textContent).toContain('summaryAuto {"count":1}');
+    expect(summary.textContent).toContain('summaryReview {"count":2}');
     // The ambiguous pair is never compared by guess.
     expect(props.preview).toHaveBeenCalledTimes(2);
     expect(props.link).not.toHaveBeenCalled();
@@ -170,8 +170,48 @@ describe("BulkLinkPanel with a peer on an old server (coordinator follow-up)", (
       />
     );
     const summary = await screen.findByTestId("bulk-summary");
-    expect(summary.textContent).toContain('"auto":1');
+    expect(summary.textContent).toContain('summaryAuto {"count":1}');
     expect(screen.getByTestId("bulk-review").textContent).toContain("sharing:bulk.review.outdated");
     expect(screen.queryByText(/sharing:bulk.state.failed/)).toBeNull();
+  });
+
+  /**
+   * Owner, 2026-11-28 (sharing UAT 2): the run never adds an entry only one side holds — such a
+   * pair goes to "Ergänzungen bestätigen" — and an offer without a copy here is a new trip, in its
+   * own group, neither counted as needing a decision nor ever taken by the run.
+   */
+  it("keeps pairs with one-sided entries and new trips out of the run", async () => {
+    const oneSided: LinkPreview = {
+      ...preview(true),
+      counts: { matched: 1, onlyHere: 0, onlyThere: 1, conflicting: 0, needsReview: 0 },
+    };
+    const props = {
+      otherName: "die andere Seite",
+      loadPairs: vi.fn().mockResolvedValue({
+        access: "full",
+        pairs: [
+          pair("a", { from: { displayName: "Papa", origin: "https://b.example" } }),
+          pair("n", { trip: null, from: { displayName: "Papa", origin: "https://b.example" } }),
+        ],
+      }),
+      preview: vi.fn().mockResolvedValue(oneSided),
+      link: vi.fn().mockResolvedValue(result),
+      undo: vi.fn(),
+      failure: vi.fn((_e: unknown, key: string) => ({ key })),
+    };
+    render(<BulkLinkPanel {...props} />);
+    const summary = await screen.findByTestId("bulk-summary");
+    expect(summary.textContent).toContain('summaryAuto {"count":0}');
+    expect(summary.textContent).toContain('summaryReview {"count":1}');
+    expect(screen.getByTestId("bulk-additions").textContent).toContain(
+      "sharing:bulk.review.additions"
+    );
+    expect(screen.getByTestId("bulk-new-trips").textContent).toContain(
+      'sharing:bulk.newTripsTitle {"count":1}'
+    );
+    expect(screen.queryByRole("button", { name: /sharing:bulk.run/ })).toBeNull();
+    expect(props.link).not.toHaveBeenCalled();
+    // One sender: named, not "die andere Seite".
+    expect(screen.getByText(/sharing:bulk.intro/).textContent).toContain('"name":"Papa"');
   });
 });

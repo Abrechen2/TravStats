@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
 
+import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { useTranslation } from "../../hooks/useTranslation";
 import { sharingLinkApi } from "../../lib/api/sharingLink";
 import { logger } from "../../lib/logger";
@@ -29,6 +30,8 @@ const dayOf = (iso: string | null): string => (iso ? iso.slice(0, 10) : "—");
  */
 export default function BulkOfferPanel({ remoteId, name }: Props): JSX.Element {
   const { t } = useTranslation(["sharing"]);
+  // 24 px, 44 px on a finger-operated screen (sharing UAT 2 measured 13 px on an iPad).
+  const box = useCoarsePointer() ? 44 : 24;
   const [trips, setTrips] = useState<BulkOfferCandidate[] | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [states, setStates] = useState<Record<string, RowState>>({});
@@ -113,6 +116,7 @@ export default function BulkOfferPanel({ remoteId, name }: Props): JSX.Element {
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
+                    style={{ width: box, height: box, flex: "none" }}
                     checked={picked.has(c.id)}
                     disabled={running || s?.kind === "done"}
                     onChange={() => toggle(c.id)}

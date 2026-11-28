@@ -281,6 +281,8 @@ describe("PeopleSection", () => {
       screen.getAllByRole("listitem").filter((li) => li.textContent?.includes("Norbert"))
     ).toHaveLength(1);
     expect(screen.getByText(/friends\.account\.remote/)).toBeTruthy();
+    // Two people of one name on two servers get distinct menu names (sharing UAT 2).
+    expect(screen.getByRole("button", { name: /friends\.menu\.labelRemote/ })).toBeTruthy();
   });
 
   it("accepts and declines a request from a person on another server", async () => {

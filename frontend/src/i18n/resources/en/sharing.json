@@ -1056,7 +1056,8 @@
       "close": "Close"
     },
     "menu": {
-      "label": "Actions for {{name}}"
+      "label": "Actions for {{name}}",
+      "labelRemote": "Actions for {{name}} ({{server}})"
     }
   },
   "receivedBanner": {
@@ -1068,7 +1069,8 @@
     "more_one": "and {{count}} more",
     "more_other": "and {{count}} more",
     "seen": "Seen",
-    "seenFailed": "That did not work. Please try again."
+    "seenFailed": "That did not work. Please try again.",
+    "linked": "{{name}} linked your trip “{{trip}}”."
   },
   "link": {
     "open": "Link with an existing copy",
@@ -1088,7 +1090,7 @@
     "conflict": "yours {{here}}, {{name}}'s {{there}}",
     "onlyHereTitle": "Only on your side",
     "onlyThereTitle": "Only at {{name}}'s",
-    "nothingCreated": "Entries only one side holds stay where they are; linking copies nothing.",
+    "nothingCreated": "Entries only one side holds are added only when you tick them.",
     "decisionTitle": "Settle differing details",
     "decision": {
       "both": "Keep both (each side keeps its own)",
@@ -1165,7 +1167,15 @@
     },
     "better": "more precise",
     "recomputed": "Recalculated: {{fields}}",
-    "decisionRule": "An empty, straight or less precise detail never overwrites a filled, drawn or more precise one – whichever side you pick."
+    "decisionRule": "An empty, straight or less precise detail never overwrites a filled, drawn or more precise one – whichever side you pick.",
+    "oneSided": {
+      "add": "Add “{{entry}}” to the other side",
+      "addShort": "Add?",
+      "duplicate": "possibly a duplicate of {{entry}} ({{day}})",
+      "open": "Look",
+      "compare": "Here: {{entry}} · at {{name}}’s: {{other}}"
+    },
+    "newPorts": "Ports added when you link: {{ports}}"
   },
   "bulk": {
     "open": "Look",
@@ -1179,16 +1189,13 @@
     "linking": "Linking trip {{done}} of {{total}} …",
     "paused": "Paused, continuing in {{minutes}} min",
     "stop": "Stop",
-    "summary": "{{auto}} trips will be linked, {{review}} need your decision.",
-    "autoTitle": "These {{count}} trips fit together",
-    "run": "Link {{count}} trips",
     "reviewTitle": "You decide these yourself",
     "review": {
       "conflict": "both sides have different details",
       "ambiguous": "fits more than one trip",
-      "noTrip": "no matching trip of yours",
       "nothingMatched": "no entry fits together",
-      "outdated": "the other side has to update TravStats – you can answer this trip on its own below"
+      "outdated": "the other side has to update TravStats – you can answer this trip on its own below",
+      "additions": "Entries only one side holds – you decide what is added"
     },
     "resultsTitle": "Result",
     "pairName": "{{mine}} ↔ {{theirs}} ({{from}})",
@@ -1238,7 +1245,18 @@
         "loadFailed": "The trips could not be loaded.",
         "proposeFailed": "Proposing did not work."
       }
-    }
+    },
+    "summaryAuto_one": "1 trip will be linked",
+    "summaryAuto_other": "{{count}} trips will be linked",
+    "summaryReview_one": "1 needs your decision.",
+    "summaryReview_other": "{{count}} need your decision.",
+    "autoTitle_one": "This trip fits together",
+    "autoTitle_other": "These {{count}} trips fit together",
+    "run_one": "Link 1 trip",
+    "run_other": "Link {{count}} trips",
+    "additionsTitle": "Confirm additions",
+    "newTripsTitle_one": "New trip (no copy on your side): 1",
+    "newTripsTitle_other": "New trips (no copy on your side): {{count}}"
   },
   "proposals": {
     "title": "Proposed links",

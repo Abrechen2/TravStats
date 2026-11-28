@@ -47,6 +47,15 @@ export interface LinkEntryView {
   when: string | null;
 }
 
+/**
+ * An entry only one side holds (owner, 2026-11-28): added to the other copy only when ticked;
+ * `duplicateOf` names a similar entry there. Absent on servers before rc.49.
+ */
+export interface LinkOneSidedView extends LinkEntryView {
+  ref?: string;
+  duplicateOf?: { label: string; when: string | null } | null;
+}
+
 export type LineQuality = "drawn" | "routed" | "straight" | "none";
 
 /** A differing value: a display value (times in the place's zone) or a line by its quality. */
@@ -97,8 +106,10 @@ export interface LinkPreview {
     differing: number;
   }[];
   matched: LinkMatchView[];
-  onlyHere: LinkEntryView[];
-  onlyThere: LinkEntryView[];
+  onlyHere: LinkOneSidedView[];
+  onlyThere: LinkOneSidedView[];
+  /** Ports the other server names that this one lacks: added on linking. */
+  newPorts?: string[];
 }
 
 export interface LinkResult {
@@ -111,6 +122,8 @@ export interface LinkResult {
   onlyThere: number;
   /** Across servers: linked, but the differing facts could not be settled. */
   settleFailed: boolean;
+  /** One-sided entries the person ticked and the link added. */
+  added?: number;
 }
 
 export type LinkPreviewAnswer = LinkPreview | AwaitingConsent;

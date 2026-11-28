@@ -9,13 +9,13 @@ import type {
   LinkCandidates,
   LinkChoices,
   LinkDecision,
-  LinkEntryView,
   LinkPreview,
   LinkPreviewAnswer,
   LinkResult,
 } from "../../types/sharingLink";
 import { Button } from "../ui";
 import InlineError from "../ui/InlineError";
+import OneSidedList from "./OneSidedList";
 import { defaultFieldChoice, formatLinkValue, linkFieldLabel } from "./linkValues";
 import { dateLocaleForLanguage } from "../../lib/units";
 
@@ -34,7 +34,12 @@ interface Props {
   otherName: string;
   loadCandidates: () => Promise<LinkCandidates>;
   preview: (tripId: string) => Promise<LinkPreviewAnswer>;
-  link: (tripId: string, decision: LinkDecision, choices: LinkChoices) => Promise<LinkResult>;
+  link: (
+    tripId: string,
+    decision: LinkDecision,
+    choices: LinkChoices,
+    add: string[]
+  ) => Promise<LinkResult>;
   failure: (err: unknown, fallbackKey: string) => LinkFailure;
   onLinked: (result: LinkResult, tripId: string) => void;
 }
@@ -60,6 +65,8 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
   const [decision, setDecision] = useState<LinkDecision>("both");
   // Per pair and field: what the person picked over the trip-level default (M2).
   const [choices, setChoices] = useState<LinkChoices>({});
+  // One-sided entries the person ticked to add to the other copy (owner, 2026-11-28).
+  const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<LinkFailure | null>(null);
 
@@ -110,30 +117,37 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
       else {
         setDryRun(answer);
         setChoices({});
+        setTicked(new Set());
       }
     }, `${NS}.errors.previewFailed`);
+  // Every field is sent as the select shows it — the better value by default — so the server
+  // applies exactly what the person saw.
+  const effectiveChoices = (): LinkChoices => {
+    const out: LinkChoices = {};
+    for (const m of dryRun?.matched ?? [])
+      for (const c of m.conflicts)
+        out[m.ref] = {
+          ...out[m.ref],
+          [c.field]: choices[m.ref]?.[c.field] ?? defaultFieldChoice(decision, c),
+        };
+    return out;
+  };
   const confirm = () =>
     run(
-      async () => onLinked(await link(tripId, decision, choices), tripId),
+      async () => onLinked(await link(tripId, decision, effectiveChoices(), [...ticked]), tripId),
       `${NS}.errors.linkFailed`
     );
+  const toggle = (ref: string, on: boolean) =>
+    setTicked((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(ref);
+      else next.delete(ref);
+      return next;
+    });
   const choose = (ref: string, field: string, choice: FieldChoice) =>
     setChoices((prev) => ({ ...prev, [ref]: { ...prev[ref], [field]: choice } }));
 
   const typeName = (e: string) => t(`${NS}.types.${e}`);
-  const entries = (title: string, list: LinkEntryView[]) =>
-    list.length > 0 && (
-      <div>
-        <p className="t-caption">{title}</p>
-        <ul className="text-sm">
-          {list.map((e, i) => (
-            <li key={`${e.entity}-${i}`}>
-              {typeName(e.entity)}: {e.label} ({dayOf(e.when)})
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
 
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
@@ -277,9 +291,28 @@ export default function LinkExistingPanel(props: Props): JSX.Element {
                 ))}
             </div>
           )}
-          {entries(t(`${NS}.onlyHereTitle`), dryRun.onlyHere)}
-          {entries(t(`${NS}.onlyThereTitle`, { name: otherName }), dryRun.onlyThere)}
+          <OneSidedList
+            title={t(`${NS}.onlyHereTitle`)}
+            list={dryRun.onlyHere}
+            otherName={otherName}
+            ticked={ticked}
+            onToggle={toggle}
+            disabled={busy}
+          />
+          <OneSidedList
+            title={t(`${NS}.onlyThereTitle`, { name: otherName })}
+            list={dryRun.onlyThere}
+            otherName={otherName}
+            ticked={ticked}
+            onToggle={toggle}
+            disabled={busy}
+          />
           <p className="t-caption">{t(`${NS}.nothingCreated`)}</p>
+          {(dryRun.newPorts?.length ?? 0) > 0 && (
+            <p className="t-caption" data-testid="link-new-ports">
+              {t(`${NS}.newPorts`, { ports: dryRun.newPorts!.join(", ") })}
+            </p>
+          )}
           <fieldset className="flex flex-col text-sm" style={{ gap: "var(--ts-space-xs)" }}>
             <legend className="t-caption">{t(`${NS}.decisionTitle`)}</legend>
             <p className="t-caption">{t(`${NS}.decisionRule`)}</p>

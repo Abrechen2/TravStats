@@ -48,7 +48,8 @@ export const sharingLinkApi = {
     userId: string,
     targetTripId: string,
     decision: LinkDecision,
-    choices: LinkChoices = {}
+    choices: LinkChoices = {},
+    add: string[] = []
   ): Promise<LinkResult> =>
     (
       await api.post<Envelope<LinkResult>>(`/sharing/trips/${enc(tripId)}/link`, {
@@ -56,6 +57,7 @@ export const sharingLinkApi = {
         targetTripId,
         decision,
         choices,
+        ...(add.length > 0 ? { add } : {}),
       })
     ).data.data,
 
@@ -77,12 +79,13 @@ export const sharingLinkApi = {
     offerId: string,
     tripId: string,
     decision: LinkDecision,
-    choices: LinkChoices = {}
+    choices: LinkChoices = {},
+    add: string[] = []
   ): Promise<LinkResult> =>
     (
       await api.post<Envelope<LinkResult>>(
         `/sharing/remote/offers/${enc(offerId)}/link`,
-        { tripId, decision, choices },
+        { tripId, decision, choices, ...(add.length > 0 ? { add } : {}) },
         ACROSS
       )
     ).data.data,
@@ -133,13 +136,15 @@ export const sharingLinkApi = {
     id: string,
     tripId: string,
     decision: LinkDecision,
-    choices: LinkChoices = {}
+    choices: LinkChoices = {},
+    add: string[] = []
   ): Promise<LinkResult> =>
     (
       await api.post<Envelope<LinkResult>>(`/sharing/link-proposals/${enc(id)}/link`, {
         tripId,
         decision,
         choices,
+        ...(add.length > 0 ? { add } : {}),
       })
     ).data.data,
   declineProposal: async (id: string): Promise<void> => {

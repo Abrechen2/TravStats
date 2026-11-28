@@ -124,8 +124,8 @@ export default function ReceivedRemoteOffers({ refresh = 0, onCount }: Props): J
             otherName={t("sharing:bulk.senders")}
             loadPairs={() => sharingLinkApi.remoteBulkPairs()}
             preview={(pair) => sharingLinkApi.offerPreview(pair.id, pair.trip!.id)}
-            link={(pair, decision, choices) =>
-              sharingLinkApi.offerLink(pair.id, pair.trip!.id, decision, choices)
+            link={(pair, decision, choices, add) =>
+              sharingLinkApi.offerLink(pair.id, pair.trip!.id, decision, choices, add)
             }
             undo={(pair) => sharingLinkApi.leave(pair.trip!.id)}
             failure={(err, fallback) => remoteSharingError(err, fallback)}
@@ -169,8 +169,8 @@ export default function ReceivedRemoteOffers({ refresh = 0, onCount }: Props): J
                   otherName={`${offer.from.displayName} (${offer.from.origin})`}
                   loadCandidates={() => sharingLinkApi.offerCandidates(offer.id)}
                   preview={(tripId) => sharingLinkApi.offerPreview(offer.id, tripId)}
-                  link={(tripId, decision, choices) =>
-                    sharingLinkApi.offerLink(offer.id, tripId, decision, choices)
+                  link={(tripId, decision, choices, add) =>
+                    sharingLinkApi.offerLink(offer.id, tripId, decision, choices, add)
                   }
                   failure={(err, fallback) => remoteSharingError(err, fallback)}
                   onLinked={(result, tripId) => {

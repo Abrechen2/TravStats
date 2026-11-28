@@ -27,8 +27,10 @@ type PairState =
   | { kind: "auto" }
   | {
       kind: "review";
-      why: "conflict" | "ambiguous" | "noTrip" | "nothingMatched" | "outdated";
+      why: "conflict" | "ambiguous" | "nothingMatched" | "outdated" | "additions";
     }
+  /** An offer with no copy here: a new trip, never taken by the run (owner, 2026-11-28). */
+  | { kind: "newTrip" }
   | { kind: "done"; linked: number }
   | { kind: "skipped"; why: string }
   | { kind: "failed"; reason: string }
@@ -39,7 +41,12 @@ interface Props {
   otherName: string;
   loadPairs: () => Promise<BulkPairs>;
   preview: (pair: BulkPair) => Promise<LinkPreviewAnswer>;
-  link: (pair: BulkPair, decision: LinkDecision, choices: LinkChoices) => Promise<LinkResult>;
+  link: (
+    pair: BulkPair,
+    decision: LinkDecision,
+    choices: LinkChoices,
+    add?: string[]
+  ) => Promise<LinkResult>;
   /** Undo: the caller's trip leaves its group. */
   undo: (pair: BulkPair) => Promise<void>;
   failure: (err: unknown, fallbackKey: string) => LinkFailure;
@@ -79,7 +86,7 @@ export default function BulkLinkPanel(props: Props): JSX.Element {
     let n = 0;
     for (const pair of open) {
       if (stop.current) break;
-      if (!pair.trip) setState(pair.id, { kind: "review", why: "noTrip" });
+      if (!pair.trip) setState(pair.id, { kind: "newTrip" });
       else if (pair.ambiguous) setState(pair.id, { kind: "review", why: "ambiguous" });
       else {
         try {
@@ -93,14 +100,19 @@ export default function BulkLinkPanel(props: Props): JSX.Element {
             setAwaiting(true);
             break;
           }
+          // Entries only one side holds are added only on the person's tick, never by the run:
+          // such a pair goes to "Ergänzungen bestätigen" (owner, 2026-11-28).
+          const oneSided = answer.counts.onlyHere + answer.counts.onlyThere > 0;
           setState(
             pair.id,
-            answer.automatic
+            answer.automatic && !oneSided
               ? { kind: "auto" }
-              : {
-                  kind: "review",
-                  why: answer.counts.matched === 0 ? "nothingMatched" : "conflict",
-                }
+              : answer.automatic
+                ? { kind: "review", why: "additions" }
+                : {
+                    kind: "review",
+                    why: answer.counts.matched === 0 ? "nothingMatched" : "conflict",
+                  }
           );
         } catch (err) {
           logger.error("Bulk link: comparing a pair failed:", err);
@@ -155,7 +167,17 @@ export default function BulkLinkPanel(props: Props): JSX.Element {
   }, []);
 
   const autoPairs = (pairs ?? []).filter((p) => states[p.id]?.kind === "auto");
-  const reviewPairs = (pairs ?? []).filter((p) => states[p.id]?.kind === "review");
+  const isReview = (p: BulkPair, additions: boolean) => {
+    const s = states[p.id];
+    return s?.kind === "review" && (s.why === "additions") === additions;
+  };
+  const reviewPairs = (pairs ?? []).filter((p) => isReview(p, false));
+  const additionPairs = (pairs ?? []).filter((p) => isReview(p, true));
+  const newTrips = (pairs ?? []).filter((p) => states[p.id]?.kind === "newTrip");
+  // One sender: name them; several (the inbox across servers): "die andere Seite".
+  const senders = [...new Set((pairs ?? []).flatMap((p) => (p.from ? [p.from.displayName] : [])))];
+  const shownName = senders.length === 1 ? senders[0] : otherName;
+  const nameOf = (p: BulkPair) => p.from?.displayName ?? otherName;
 
   const runAll = async (): Promise<void> => {
     stop.current = false;
@@ -203,7 +225,7 @@ export default function BulkLinkPanel(props: Props): JSX.Element {
     t(`${NS}.pairName`, {
       mine: p.trip?.name ?? "—",
       theirs: p.other.name,
-      name: otherName,
+      name: nameOf(p),
       from: dayOf(p.trip?.startDay ?? p.other.startDay),
     });
 
@@ -232,12 +254,53 @@ export default function BulkLinkPanel(props: Props): JSX.Element {
     return k === "done" || k === "failed" || k === "skipped" || k === "undone" || p.linked;
   });
 
+  const reviewList = (list: BulkPair[], testId: string, title: string) =>
+    list.length > 0 &&
+    !busy && (
+      <div data-testid={testId}>
+        <p className="t-caption">{title}</p>
+        <ul className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
+          {list.map((p) => (
+            <li key={p.id}>
+              {names(p)} · {resultLine(p)}{" "}
+              {p.trip &&
+                states[p.id]?.kind === "review" &&
+                (states[p.id] as { why: string }).why !== "outdated" && (
+                  <Button onClick={() => setReviewing(reviewing === p.id ? null : p.id)}>
+                    {t(`${NS}.open`)}
+                  </Button>
+                )}
+              {reviewing === p.id && p.trip && (
+                <LinkExistingPanel
+                  otherName={nameOf(p)}
+                  loadCandidates={async () => ({
+                    access: "full",
+                    candidates: [{ ...p.other, reason: p.reason ?? "overlap" }],
+                  })}
+                  preview={() => preview(p)}
+                  link={(_target, decision, choices, add) => link(p, decision, choices, add)}
+                  failure={failure}
+                  onLinked={(result) => {
+                    setReviewing(null);
+                    setState(p.id, {
+                      kind: "done",
+                      linked: result.linked + result.alreadyLinked,
+                    });
+                  }}
+                />
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+
   return (
     <div className="flex flex-col text-sm" style={{ gap: "var(--ts-space-sm)" }}>
-      <p>{t(`${NS}.intro`, { name: otherName })}</p>
+      <p>{t(`${NS}.intro`, { name: shownName })}</p>
       {awaiting && (
         <p role="status" data-testid="bulk-awaiting-consent">
-          {t(`${NS}.awaitingConsent`, { name: otherName })}
+          {t(`${NS}.awaitingConsent`, { name: shownName })}
         </p>
       )}
       {phase === "loading" && <p>{t(`${NS}.loading`)}</p>}
@@ -253,69 +316,48 @@ export default function BulkLinkPanel(props: Props): JSX.Element {
         </span>
       )}
       {phase === "ready" && pairs && pairs.length === 0 && !awaiting && !error && (
-        <p>{t(`${NS}.none`, { name: otherName })}</p>
+        <p>{t(`${NS}.none`, { name: shownName })}</p>
       )}
-      {phase === "ready" && (autoPairs.length > 0 || reviewPairs.length > 0) && (
-        <>
-          <p role="status" data-testid="bulk-summary">
-            {t(`${NS}.summary`, { auto: autoPairs.length, review: reviewPairs.length })}
-          </p>
-          {autoPairs.length > 0 && (
-            <details>
-              <summary>{t(`${NS}.autoTitle`, { count: autoPairs.length })}</summary>
-              <ul>
-                {autoPairs.map((p) => (
-                  <li key={p.id}>{names(p)}</li>
-                ))}
-              </ul>
-            </details>
-          )}
-          {autoPairs.length > 0 && (
-            <span>
-              <Button variant="primary" onClick={() => void runAll()}>
-                {t(`${NS}.run`, { count: autoPairs.length })}
-              </Button>
-            </span>
-          )}
-        </>
-      )}
-      {reviewPairs.length > 0 && !busy && (
-        <div data-testid="bulk-review">
-          <p className="t-caption">{t(`${NS}.reviewTitle`)}</p>
-          <ul className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
-            {reviewPairs.map((p) => (
-              <li key={p.id}>
-                {names(p)} · {resultLine(p)}{" "}
-                {p.trip &&
-                  states[p.id]?.kind === "review" &&
-                  (states[p.id] as { why: string }).why !== "outdated" && (
-                    <Button onClick={() => setReviewing(reviewing === p.id ? null : p.id)}>
-                      {t(`${NS}.open`)}
-                    </Button>
-                  )}
-                {reviewing === p.id && p.trip && (
-                  <LinkExistingPanel
-                    otherName={otherName}
-                    loadCandidates={async () => ({
-                      access: "full",
-                      candidates: [{ ...p.other, reason: p.reason ?? "overlap" }],
-                    })}
-                    preview={() => preview(p)}
-                    link={(_target, decision, choices) => link(p, decision, choices)}
-                    failure={failure}
-                    onLinked={(result) => {
-                      setReviewing(null);
-                      setState(p.id, {
-                        kind: "done",
-                        linked: result.linked + result.alreadyLinked,
-                      });
-                    }}
-                  />
-                )}
-              </li>
+      {phase === "ready" &&
+        (autoPairs.length > 0 || reviewPairs.length > 0 || additionPairs.length > 0) && (
+          <>
+            <p role="status" data-testid="bulk-summary">
+              {t(`${NS}.summaryAuto`, { count: autoPairs.length })}
+              {", "}
+              {t(`${NS}.summaryReview`, { count: reviewPairs.length + additionPairs.length })}
+            </p>
+            {autoPairs.length > 0 && (
+              <details>
+                <summary>{t(`${NS}.autoTitle`, { count: autoPairs.length })}</summary>
+                <ul>
+                  {autoPairs.map((p) => (
+                    <li key={p.id}>{names(p)}</li>
+                  ))}
+                </ul>
+              </details>
+            )}
+            {autoPairs.length > 0 && (
+              <span>
+                <Button variant="primary" onClick={() => void runAll()}>
+                  {t(`${NS}.run`, { count: autoPairs.length })}
+                </Button>
+              </span>
+            )}
+          </>
+        )}
+      {reviewList(reviewPairs, "bulk-review", t(`${NS}.reviewTitle`))}
+      {reviewList(additionPairs, "bulk-additions", t(`${NS}.additionsTitle`))}
+      {newTrips.length > 0 && !busy && (
+        <details data-testid="bulk-new-trips">
+          <summary className="t-caption">
+            {t(`${NS}.newTripsTitle`, { count: newTrips.length })}
+          </summary>
+          <ul>
+            {newTrips.map((p) => (
+              <li key={p.id}>{names(p)}</li>
             ))}
           </ul>
-        </div>
+        </details>
       )}
       {finishedPairs.length > 0 && (
         <div data-testid="bulk-results">

@@ -33,12 +33,16 @@ export function linkFieldLabel(field: string, t: Translate): string {
   return group !== "" ? group : shareFieldLabel(field, t);
 }
 
-/** What a trip-level decision makes of one field: the better value wins, a tie follows it. */
+/**
+ * What a field starts at: the better value ("genauer") whatever the trip-level decision — sharing
+ * UAT 2 found "Jeder behält seine" preselected beside a value marked better. A tie follows the
+ * decision. The panel sends every pick explicitly, so the server does what the select shows.
+ */
 export function defaultFieldChoice(
   decision: LinkDecision,
   conflict: Pick<LinkConflictView, "better">
 ): FieldChoice {
-  if (conflict.better === "here") return decision === "both" ? "both" : "mine";
-  if (conflict.better === "there") return decision === "both" ? "both" : "theirs";
+  if (conflict.better === "here") return "mine";
+  if (conflict.better === "there") return "theirs";
   return decision === "best" ? "both" : decision;
 }
