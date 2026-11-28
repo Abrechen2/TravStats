@@ -416,7 +416,10 @@ async function writeAll(
 /** A stop that wraps an entry (format 6): its domain and the entry this import wrote. */
 function wrapped(s: TripFile["stops"][number], ids: IdMaps) {
   const domain = s.domain as keyof typeof STOP_SOURCE_KIND | null | undefined;
-  if (!domain || !(domain in STOP_SOURCE_KIND) || !s.sourceKey) return {};
+  if (!domain) return {};
+  // A plain stop's kind (poi, train, …) is kept as it is; it wraps no entry.
+  if (!(domain in STOP_SOURCE_KIND)) return { domain: s.domain as string };
+  if (!s.sourceKey) return {};
   const sourceId = ids[STOP_SOURCE_KIND[domain]].get(s.sourceKey);
   return sourceId ? { domain, sourceId } : {};
 }

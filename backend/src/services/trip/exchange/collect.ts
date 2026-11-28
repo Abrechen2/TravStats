@@ -605,6 +605,9 @@ export async function collectTrip(
         s.lodgingStayId && trip.lodgingStays.some((st) => st.id === s.lodgingStayId)
           ? stayKey(s.lodgingStayId)
           : null,
+      // A plain stop's kind (poi, train, …): without it a copy never pairs with the original in a
+      // link (sharing UAT 2, the India trip's 12 stops). Version 6; absent when the stop has none.
+      ...(s.domain ? { domain: s.domain } : {}),
       ...(priv ? { private: { notes: s.notes } } : {}),
     };
   });
