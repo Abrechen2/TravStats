@@ -325,6 +325,11 @@ describe("a trip offered across two servers", () => {
     expect(rail).toMatchObject({ seat: null, notes: null });
 
     const [cruise] = copy.cruises;
+    const userPort = await b.prisma.port.findFirstOrThrow({
+      where: { name: "User Port", unlocode: null, isUserAdded: true },
+      orderBy: { id: "desc" },
+    });
+    made.get(b)?.ports.push(userPort.id);
     expect(cruise).toMatchObject({
       shipId: catB.ship.id,
       departurePortId: catB.p1.id,
@@ -339,8 +344,12 @@ describe("a trip offered across two servers", () => {
       [2, null, true, null],
       [3, catB.p4.id, false, null],
       [4, null, false, "Port Two"],
-      [5, null, false, "User Port"],
+      [5, userPort.id, false, null],
     ]);
+    // A's own addition travels as name and position and is added on B as a user port of its own —
+    // never matched to B's catalogue row by A's code (sharing UAT 2, the Yangtze ports).
+    expect(userPort).toMatchObject({ isUserAdded: true, unlocode: null, lat: 35.0 });
+    expect(userPort.id).not.toBe(catB.p3.id);
     expect(cruise.stops.every((s) => s.excursionNote === null)).toBe(true);
     // The leg into a port B lacks cannot be described there; the other one is B's own row.
     expect(cruise.legs.map((l) => [l.fromPortId, l.toPortId])).toEqual([[catB.p1.id, catB.p4.id]]);
