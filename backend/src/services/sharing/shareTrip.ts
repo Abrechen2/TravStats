@@ -262,7 +262,13 @@ export async function leaveGroup(userId: string, tripId: string): Promise<{ left
       throw new AppError("This trip is not shared", 409, "SHARE_TRIP_NOT_SHARED");
     }
     // Undo of a link also takes back the one-sided entries it added (owner, 2026-11-28).
-    await undoAdditions(tx, userId, trip.shareGroupId, await linkAdditionsOf(tx, userId, trip));
+    await undoAdditions(
+      tx,
+      userId,
+      trip.shareGroupId,
+      trip.id,
+      await linkAdditionsOf(tx, userId, trip)
+    );
     await detachTrip(tx, userId, trip);
     return { left: true as const };
   });

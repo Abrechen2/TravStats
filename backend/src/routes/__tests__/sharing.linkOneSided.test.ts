@@ -7,6 +7,7 @@ import {
   linkWithConsent,
   makeAccount,
   makeFullTrip,
+  sharedPair,
   wipeShareTestAccounts,
   type TestAccount,
 } from "./sharingFixtures";
@@ -125,5 +126,56 @@ describe("one-sided entries in a link (owner, 2026-11-28)", () => {
       (o) => o.entity === "rail"
     );
     expect(there?.duplicateOf).toMatchObject({ label: expect.stringContaining("Helsingfors") });
+  });
+
+  /**
+   * Security review: the undo deleted every row of an added key in ALL other members' trips. It
+   * now deletes exactly the copy rows the link recorded, and only in the acting person's own trip.
+   */
+  describe("the undo stays in the acting person's own trip", () => {
+    it("Ben's undo leaves Cleo's copy alone", async () => {
+      const cleo = await makeAccount("cleo-os");
+      const pair = await sharedPair(ben, cleo); // Ben's trip, shared with Cleo.
+      await linkWithConsent(anna, cleo);
+      await linkWithConsent(cleo, anna);
+      const extra = await rail(anna, annas.trip.id);
+      const id = await proposal();
+      const linked = await as(ben).post(`/link-proposals/${id}/link`, {
+        tripId: pair.full.trip.id,
+        decision: "best",
+        add: [`rail:${extra.id}`],
+      });
+      expect([linked.status, linked.body.code]).toEqual([200, undefined]);
+      expect(await railsOf(ben, pair.full.trip.id)).toHaveLength(1);
+      expect(await railsOf(cleo, pair.memberTrip.id)).toHaveLength(1);
+
+      await as(ben).post(`/trips/${pair.full.trip.id}/leave`).expect(200);
+      expect(await railsOf(ben, pair.full.trip.id)).toHaveLength(0);
+      expect(await railsOf(cleo, pair.memberTrip.id)).toHaveLength(1);
+      expect(await railsOf(anna, annas.trip.id)).toHaveLength(1);
+    });
+
+    it("an added copy Ben edited since is kept, with a notice", async () => {
+      const extra = await rail(anna, annas.trip.id);
+      const id = await proposal();
+      await as(ben)
+        .post(`/link-proposals/${id}/link`, {
+          tripId: bens.trip.id,
+          decision: "best",
+          add: [`rail:${extra.id}`],
+        })
+        .expect(200);
+      const [copy] = await railsOf(ben, bens.trip.id);
+      await prisma.railJourney.update({
+        where: { id: copy.id },
+        data: { seat: "12A", updatedAt: new Date(Date.now() + 60_000) },
+      });
+      await as(ben).post(`/trips/${bens.trip.id}/leave`).expect(200);
+      expect(await railsOf(ben, bens.trip.id)).toHaveLength(1);
+      const notice = await prisma.shareNotice.findFirst({
+        where: { userId: ben.id, kind: "conflict", entityType: "rail" },
+      });
+      expect(notice?.after).toMatchObject({ keptAfterUndo: true, entryId: copy.id });
+    });
   });
 });

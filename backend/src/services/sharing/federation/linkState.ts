@@ -14,7 +14,18 @@ export const linkedStateSchema = z.object({
      * (they are not in `skip`), the person's own were spread to the home. The undo removes them.
      */
     added: z
-      .array(z.object({ entity: z.string(), key: z.string(), ownerId: z.string() }))
+      .array(
+        z.object({
+          entity: z.string(),
+          key: z.string(),
+          ownerId: z.string(),
+          copies: z
+            .array(
+              z.object({ id: z.string(), userId: z.string(), tripId: z.string(), at: z.string() })
+            )
+            .optional(),
+        })
+      )
       .optional(),
   }),
 });
